@@ -7,6 +7,8 @@
 
 #include <string>
 #include "../util/Log.h"
+#include "../util/CallBack.h"
+#include "../video/VideoPlayer.h"
 
 extern "C" {
 #include "../ffmpeg/includes/libavformat/avformat.h"
@@ -21,7 +23,12 @@ public:
 
     void prepare(const char *path);
 
+    Decode(CallBack *callback);
+
+    ~Decode();
+
 private:
+    CallBack *callBack;
     AVFormatContext *pFmtCtx = nullptr;
 
     AVStream *pAudioStream = nullptr;
@@ -34,8 +41,10 @@ private:
 
     AVCodecContext *pVideoCodecCtx = nullptr;
     AVCodec *pVideoCodec = nullptr;
+    VideoPlayer *videoPlayer;
 
     void decodeVideo(int videoIndex);
+
     void decodeAudio(int audioIndex);
 };
 

@@ -82,7 +82,10 @@ add_library( # Sets the name of the library.
 
         # Provides a relative path to your source file(s).
         native-lib.cpp
-        decode/Decode.cpp)
+        decode/Decode.cpp
+        util/CallBack.cpp
+        util/BlockQueue.cpp
+        video/VideoPlayer.cpp)
 
 
 find_library( # Sets the name of the path variable.

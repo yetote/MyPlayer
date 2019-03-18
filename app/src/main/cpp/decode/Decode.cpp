@@ -41,6 +41,7 @@ void Decode::prepare(const char *path) {
         return;
     }
     decodeVideo(videoIndex);
+    callBack->onPrepare(callBack->CHILD_THREAD, true, 0);
 }
 
 void Decode::decodeVideo(int videoIndex) {
@@ -67,6 +68,16 @@ void Decode::decodeVideo(int videoIndex) {
         return;
     }
 
+    AVPacket *packet = av_packet_alloc();
+    int i = 0;
+    while (av_read_frame(pFmtCtx, packet) >= 0) {
+        if (packet->stream_index == videoIndex) {
+            videoPlayer->blockQueue.push(i);
+            i++;
+        }
+    }
+    av_packet_free(&packet);
+    avcodec_free_context(&pVideoCodecCtx);
 }
 
 void Decode::decodeAudio(int audioIndex) {
@@ -92,4 +103,9 @@ void Decode::decodeAudio(int audioIndex) {
         LOGE("decode", "打开音频解码器失败");
         return;
     }
+
+}
+
+Decode::Decode(CallBack *callback) {
+    this->callBack = callback;
 }

@@ -1,51 +1,42 @@
-#ifndef BLOCKQUEUE_BLOCKQUEUE_H
-#define BLOCKQUEUE_BLOCKQUEUE_H
+//
+// Created by ether on 2019/3/14.
+//
+
+#ifndef MYPLAYER_BLOCKQUEUE_H
+#define MYPLAYER_BLOCKQUEUE_H
+
+#include "Log.h"
 
 #include <queue>
 #include <mutex>
 
-enum popResult {
-    POP_OK, POP_STOP,POP_UNEXPECTED
-};
+extern "C" {
+#include <libavcodec/avcodec.h>
+}
 
-template<typename T>
-class BlockQueue : public std::queue<T> {
+
+class BlockQueue {
 public:
-    std::mutex mLock;
-    std::condition_variable mCond;
-    std::queue<T> queue;
-    bool stopFlag = false;
-    virtual ~BlockQueue() = default;
-    void push(const T &value) {
-        std::lock_guard<decltype(mLock)> lock(mLock);
-        queue.push(value);
-        mCond.notify_one();
-    }
 
-    void push(const T &&value) {
-        std::lock_guard<decltype(mLock)> lock(mLock);
-        queue.push(std::move(value));
-        mCond.notify_one();
-    }
+    bool isPushFinish;
+    bool isFinish;
 
-    popResult pop(T &out) {
-        std::unique_lock<decltype(mLock)> lock(mLock);
-        if (stopFlag && queue.empty()) return POP_STOP;
+    void setState(bool isPush);
 
-        if (queue.empty()) mCond.wait(lock);
-        if (stopFlag && queue.empty()) return POP_STOP;
-        if (queue.empty()) return POP_UNEXPECTED;
-        out = std::move(queue.front());
-        queue.pop();
-        return POP_OK;
-    }
+    void push(AVPacket *packet);
 
-    void stop() {
-        std::lock_guard<decltype(mLock)> lock(mLock);
-        stopFlag = true;
-        mCond.notify_all();
-    }
+    void init();
+
+    void pop(AVPacket *packet1);
+
+private:
+    AVPacket *packet;
+    std::queue<AVPacket *> queue;
+    std::condition_variable cond;
+    std::mutex mutex;
+
+    void stop();
 };
 
 
-#endif //BLOCKQUEUE_BLOCKQUEUE_H
+#endif //MYPLAYER_BLOCKQUEUE_H

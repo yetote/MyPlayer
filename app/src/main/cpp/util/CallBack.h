@@ -22,6 +22,9 @@ public:
 
     void onPrepare(THREAD_TYPE threadType, bool isSuccess, int errorCode);
 
+    bool isDecode;
+    bool isFinish;
+
 private:
     JavaVM *jvm;
     JNIEnv *env;

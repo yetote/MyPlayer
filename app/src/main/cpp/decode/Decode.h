@@ -14,6 +14,9 @@ extern "C" {
 #include "../ffmpeg/includes/libavformat/avformat.h"
 #include "../ffmpeg/includes/libavutil/frame.h"
 #include "../ffmpeg/includes/libavcodec/avcodec.h"
+#include "../ffmpeg/includes/libavutil/time.h"
+#include "../ffmpeg/includes/libavutil/imgutils.h"
+#include "../ffmpeg/includes/libswscale/swscale.h"
 };
 
 
@@ -22,6 +25,7 @@ public:
     int audioIndex, videoIndex;
 
     void prepare(const char *path);
+    void play();
 
     Decode(CallBack *callback);
 

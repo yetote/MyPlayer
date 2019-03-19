@@ -7,11 +7,23 @@
 
 
 #include "../util/BlockQueue.h"
+#include <thread>
 
 class VideoPlayer {
 public:
-    BlockQueue<int> blockQueue;
-    void push(int i);
+    bool isFinish = false;
+    static bool isPushFinish;
+
+    void init();
+
+    void setData(AVPacket *packet);
+    void setState(bool isPush);
+    void stop();
+
+    void play(AVPacket *packet1);
+
+private:
+    static void push(AVPacket *packet);
 };
 
 

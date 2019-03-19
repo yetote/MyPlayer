@@ -2,6 +2,8 @@
 // Created by ether on 2019/3/13.
 //
 
+
+
 #include "Decode.h"
 
 
@@ -35,16 +37,17 @@ void Decode::prepare(const char *path) {
         LOGE("decode", "未找到音频流");
         return;
     }
-    decodeAudio(audioIndex);
     if (videoIndex == -1) {
         LOGE("decode", "未找到视频流");
         return;
     }
-    decodeVideo(videoIndex);
     callBack->onPrepare(callBack->CHILD_THREAD, true, 0);
+    decodeAudio(audioIndex);
+    decodeVideo(videoIndex);
 }
 
 void Decode::decodeVideo(int videoIndex) {
+    videoPlayer->init();
     int rst = 0;
     pVideoStream = pFmtCtx->streams[videoIndex];
     pVideoCodec = avcodec_find_decoder(pVideoStream->codecpar->codec_id);
@@ -72,15 +75,19 @@ void Decode::decodeVideo(int videoIndex) {
     int i = 0;
     while (av_read_frame(pFmtCtx, packet) >= 0) {
         if (packet->stream_index == videoIndex) {
-            videoPlayer->blockQueue.push(i);
+            videoPlayer->setData(packet);
             i++;
+            LOGE("decode", "解码了%d帧", i);
+            av_usleep(30000);
         }
     }
     av_packet_free(&packet);
     avcodec_free_context(&pVideoCodecCtx);
+    videoPlayer->setState(true);
 }
 
 void Decode::decodeAudio(int audioIndex) {
+
     int rst = 0;
     pAudioStream = pFmtCtx->streams[audioIndex];
     pAudioCodec = avcodec_find_decoder(pAudioStream->codecpar->codec_id);
@@ -108,4 +115,59 @@ void Decode::decodeAudio(int audioIndex) {
 
 Decode::Decode(CallBack *callback) {
     this->callBack = callback;
+    videoPlayer = new VideoPlayer();
+}
+
+void Decode::play() {
+    LOGE("decode", "开始播放");
+    AVPacket *packet = av_packet_alloc();
+    AVFrame *pFrame = av_frame_alloc();
+    int num = av_image_get_buffer_size(AV_PIX_FMT_YUV420P, pFrame->width,
+                                       pFrame->height,
+                                       1);
+    uint8_t *buffer = static_cast<uint8_t *>(av_malloc(num * sizeof(uint8_t)));
+    av_image_fill_arrays(pFrame->data,
+                         pFrame->linesize,
+                         buffer,
+                         AV_PIX_FMT_YUV420P,
+                         pFrame->width,
+                         pFrame->height,
+                         1);
+//    SwsContext *swsContext = sws_getContext(pVideoCodecCtx->width,
+//                                            pVideoCodecCtx->height,
+//                                            pVideoCodecCtx->pix_fmt,
+//                                            pVideoCodecCtx->width,
+//                                            pVideoCodecCtx->height,
+//                                            AV_PIX_FMT_YUV420P,
+//                                            SWS_BICUBIC,
+//                                            null, null, null);
+    while (!videoPlayer->isFinish) {
+        int rst;
+        videoPlayer->play(packet);
+        rst = avcodec_send_packet(pVideoCodecCtx, packet);
+        if (rst < 0) {
+            LOGE("decode", "发送packet失败，错误码%d", rst);
+            continue;
+        }
+        while (rst >= 0) {
+            rst = avcodec_receive_frame(pVideoCodecCtx, pFrame);
+            LOGE("decode", "接受%d", rst);
+            if (rst == AVERROR(EAGAIN)) {
+                LOGE("decode", "%s", "读取解码数据失败");
+                break;
+            } else if (rst == AVERROR_EOF) {
+                LOGE("decode", "%s", "解码完成");
+                return;
+            } else if (rst < 0) {
+                LOGE("decode", "%s", "解码出错");
+                break;
+            }
+        }
+//        sws_scale(swsContext, pFrame->data, pFrame->linesize, 0, pFrame->height,
+//                  pFrame->data, pFrame->linesize);
+        LOGE("decode", "format%d", pFrame->format == AV_PIX_FMT_YUV420P);
+    }
+    LOGE("decode", "解码完成");
+    av_packet_free(&packet);
+
 }

@@ -5,11 +5,14 @@
 
 
 #include "Decode.h"
+#include "../audio/AudioPlayer.h"
 
 
 #define  null NULL
+AudioPlayer *audioPlayer;
 
 void Decode::prepare(const char *path) {
+
     int rst = 0;
     av_register_all();
     avformat_network_init();
@@ -39,11 +42,13 @@ void Decode::prepare(const char *path) {
     }
     if (videoIndex == -1) {
         LOGE("decode", "未找到视频流");
-        return;
+//        return;
     }
-    callBack->onPrepare(callBack->CHILD_THREAD, true, 0);
-    decodeAudio(audioIndex);
-    decodeVideo(videoIndex);
+    std::thread decodeAudioThread(&Decode::decodeAudio, this, audioIndex);
+//    decodeAudio(audioIndex);
+    decodeAudioThread.detach();
+
+//    decodeVideo(videoIndex);
 }
 
 void Decode::decodeVideo(int videoIndex) {
@@ -87,7 +92,7 @@ void Decode::decodeVideo(int videoIndex) {
 }
 
 void Decode::decodeAudio(int audioIndex) {
-
+    audioPlayer = new AudioPlayer();
     int rst = 0;
     pAudioStream = pFmtCtx->streams[audioIndex];
     pAudioCodec = avcodec_find_decoder(pAudioStream->codecpar->codec_id);
@@ -95,22 +100,35 @@ void Decode::decodeAudio(int audioIndex) {
         LOGE("decode", "未找到音频解码器");
         return;
     }
-    pAudioCodecCtx = avcodec_alloc_context3(pAudioCodec);
-    if (pAudioCodecCtx == nullptr) {
+    audioPlayer->audioCodecCtx = avcodec_alloc_context3(pAudioCodec);
+    if (audioPlayer->audioCodecCtx == nullptr) {
         LOGE("decode", "无法获取音频解码器环境");
         return;
     }
-    rst = avcodec_parameters_to_context(pAudioCodecCtx, pAudioStream->codecpar);
+    rst = avcodec_parameters_to_context(audioPlayer->audioCodecCtx, pAudioStream->codecpar);
     if (rst < 0) {
         LOGE("decode", "无法复制音频解码器环境");
         return;
     }
-    rst = avcodec_open2(pAudioCodecCtx, pAudioCodec, null);
+    rst = avcodec_open2(audioPlayer->audioCodecCtx, pAudioCodec, null);
     if (rst != 0) {
         LOGE("decode", "打开音频解码器失败");
         return;
     }
+    AVPacket *packet = av_packet_alloc();
+//    audioPlayer = new AudioPlayer();
+    audioPlayer->channelNum = pAudioStream->codecpar->channels;
+    audioPlayer->sampleRate = pAudioStream->codecpar->sample_rate;
+    audioPlayer->initOboe();
+    callBack->onPrepare(callBack->CHILD_THREAD, true, 0);
+    while (av_read_frame(pFmtCtx, packet) >= 0) {
+//        LOGE(LOG_TAG, "streamIndex=%d,audioIndex=%d", packet->stream_index, audioIndex);
+        if (packet->stream_index == audioIndex) {
+            audioPlayer->setData(packet);
+//            LOGE(LOG_TAG, "开始填充数据");
 
+        }
+    }
 }
 
 Decode::Decode(CallBack *callback) {
@@ -156,8 +174,8 @@ void Decode::play() {
                 LOGE("decode", "%s", "读取解码数据失败");
                 break;
             } else if (rst == AVERROR_EOF) {
-                LOGE("decode", "%s", "解码完成");
-                return;
+                LOGE("decode", "%s", "EOF解码完成");
+                break;
             } else if (rst < 0) {
                 LOGE("decode", "%s", "解码出错");
                 break;
@@ -169,5 +187,13 @@ void Decode::play() {
     }
     LOGE("decode", "解码完成");
     av_packet_free(&packet);
+
+}
+
+void Decode::audioPlay() {
+    audioPlayer->play();
+}
+
+void Decode::decode() {
 
 }

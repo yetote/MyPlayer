@@ -4,19 +4,25 @@
 # Sets the minimum version of CMake required to build the native library.
 
 cmake_minimum_required(VERSION 3.4.1)
-set(path_project D:/AndroidStudioProjects/MyPlayer)
-set(libs_path ${path_project}/app/libs)
-include_directories(${path_project}/app/src/main/cpp/ffmpeg/includes)
+
+set(PATH_PROJECT D:/AndroidStudioProjects/MyPlayer)
+set(LIBS_PATH ${PATH_PROJECT}/app/libs)
+set(OBOE_PATH D:/audiotest/oboe-1.1.1)
+
+add_subdirectory(${OBOE_PATH} ./oboe)
+
+include_directories(${OBOE_PATH}/include)
+include_directories(${PATH_PROJECT}/app/src/main/cpp/ffmpeg/includes)
 
 add_library(avutil
         SHARED
         IMPORTED)
 set_target_properties(avutil
         PROPERTIES IMPORTED_LOCATION
-        ${libs_path}/${ANDROID_ABI}/libavutil.so)
+        ${LIBS_PATH}/${ANDROID_ABI}/libavutil.so)
 
 add_library(swresample SHARED IMPORTED)
-set_target_properties(swresample PROPERTIES IMPORTED_LOCATION ${libs_path}/${ANDROID_ABI}/libswresample.so)
+set_target_properties(swresample PROPERTIES IMPORTED_LOCATION ${LIBS_PATH}/${ANDROID_ABI}/libswresample.so)
 
 add_library(avcodec
         SHARED
@@ -26,7 +32,7 @@ add_library(avcodec
 set_target_properties(
         avcodec
         PROPERTIES IMPORTED_LOCATION
-        ${libs_path}/${ANDROID_ABI}/libavcodec.so
+        ${LIBS_PATH}/${ANDROID_ABI}/libavcodec.so
 )
 
 add_library(avformat
@@ -37,7 +43,7 @@ add_library(avformat
 set_target_properties(
         avformat
         PROPERTIES IMPORTED_LOCATION
-        ${libs_path}/${ANDROID_ABI}/libavformat.so
+        ${LIBS_PATH}/${ANDROID_ABI}/libavformat.so
 )
 
 add_library(swscale
@@ -48,7 +54,7 @@ add_library(swscale
 set_target_properties(
         swscale
         PROPERTIES IMPORTED_LOCATION
-        ${libs_path}/${ANDROID_ABI}/libswscale.so
+        ${LIBS_PATH}/${ANDROID_ABI}/libswscale.so
 )
 
 
@@ -60,7 +66,7 @@ add_library(avfilter
 set_target_properties(
         avfilter
         PROPERTIES IMPORTED_LOCATION
-        ${libs_path}/${ANDROID_ABI}/libavfilter.so
+        ${LIBS_PATH}/${ANDROID_ABI}/libavfilter.so
 )
 
 add_library(avdevice
@@ -71,7 +77,7 @@ add_library(avdevice
 set_target_properties(
         avdevice
         PROPERTIES IMPORTED_LOCATION
-        ${libs_path}/${ANDROID_ABI}/libavdevice.so
+        ${LIBS_PATH}/${ANDROID_ABI}/libavdevice.so
 )
 
 add_library( # Sets the name of the library.
@@ -85,7 +91,8 @@ add_library( # Sets the name of the library.
         decode/Decode.cpp
         util/CallBack.cpp
         util/BlockQueue.cpp
-        video/VideoPlayer.cpp)
+        video/VideoPlayer.cpp
+        audio/AudioPlayer.cpp)
 
 
 find_library( # Sets the name of the path variable.
@@ -97,7 +104,7 @@ find_library( # Sets the name of the path variable.
 
 target_link_libraries( # Specifies the target library.
         native-lib
-
+        oboe
         avutil
         swresample
         avformat

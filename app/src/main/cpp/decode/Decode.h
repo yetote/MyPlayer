@@ -9,6 +9,7 @@
 #include "../util/Log.h"
 #include "../util/CallBack.h"
 #include "../video/VideoPlayer.h"
+#include <pthread.h>
 
 extern "C" {
 #include "../ffmpeg/includes/libavformat/avformat.h"
@@ -25,7 +26,10 @@ public:
     int audioIndex, videoIndex;
 
     void prepare(const char *path);
+
     void play();
+
+    void audioPlay();
 
     Decode(CallBack *callback);
 
@@ -50,6 +54,8 @@ private:
     void decodeVideo(int videoIndex);
 
     void decodeAudio(int audioIndex);
+
+    void decode();
 };
 
 

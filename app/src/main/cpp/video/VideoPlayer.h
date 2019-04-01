@@ -11,13 +11,15 @@
 
 class VideoPlayer {
 public:
-    bool isFinish = false;
+    bool isFinish;
     static bool isPushFinish;
 
     void init();
 
     void setData(AVPacket *packet);
+
     void setState(bool isPush);
+
     void stop();
 
     void play(AVPacket *packet1);

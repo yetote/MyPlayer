@@ -6,7 +6,7 @@
 
 void BlockQueue::push(AVPacket *packet) {
     std::unique_lock<decltype(mutex)> lock(mutex);
-    while (queue.size() >= 100) {
+    while (queue.size() >= 1000) {
         LOGE("blockQueue", "队列已满，阻塞中：%d", queue.size());
         cond.wait(lock);
     }
@@ -21,7 +21,6 @@ void BlockQueue::pop(AVPacket *packet1) {
         LOGE("blockQueue", "the messagequeue is empty ,waiting producer add message ");
         cond.wait(lock);
     } else {
-//        AVPacket *packet = av_packet_alloc();
         av_packet_ref(packet1, queue.front());
         LOGE("blockQueue", "packet出队，队列剩余:%d", queue.size());
         queue.pop();

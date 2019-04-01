@@ -21,8 +21,8 @@ void VideoPlayer::init() {
 
 
 void VideoPlayer::play(AVPacket* packet1) {
-    isFinish = videoQueue.isFinish;
     videoQueue.pop(packet1);
+    isFinish = videoQueue.isFinish;
 }
 
 void VideoPlayer::setState(bool isPush) {

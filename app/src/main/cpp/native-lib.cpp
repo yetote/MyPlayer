@@ -30,9 +30,9 @@ Java_com_example_myplayer_player_MyPlayer_prepare(JNIEnv *env, jobject instance,
 }extern "C"
 JNIEXPORT void JNICALL
 Java_com_example_myplayer_player_MyPlayer_play(JNIEnv *env, jobject instance) {
-    sleep(1);
-    std::thread decodeThread(&Decode::play, decode);
+    sleep(5);
+    std::thread decodeThread(&Decode::audioPlay, decode);
     decodeThread.detach();
-//    decode->play();
+//    decode->audioPlay();
 
 }

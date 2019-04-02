@@ -6,7 +6,7 @@
 
 void BlockQueue::push(AVPacket *packet) {
     std::unique_lock<decltype(mutex)> lock(mutex);
-    while (queue.size() >= 1000) {
+    while (queue.size() >= 100) {
         LOGE("blockQueue", "队列已满，阻塞中：%d", queue.size());
         cond.wait(lock);
     }

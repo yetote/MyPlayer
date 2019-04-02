@@ -98,13 +98,13 @@ void AudioPlayer::initOboe() {
         LOGE(LOG_TAG, "创建流失败");
         return;
     }
+    stream->setBufferSizeInFrames(44100 * 2 * 2);
     printAudioStreamInfo(stream);
 
 }
 
 AudioPlayer::AudioPlayer() {
     isPlaying = false;
-
 }
 
 void AudioPlayer::setBuilderParams(AudioStreamBuilder *builder) {
@@ -115,6 +115,7 @@ void AudioPlayer::setBuilderParams(AudioStreamBuilder *builder) {
     builder->setPerformanceMode(PerformanceMode::LowLatency);
     builder->setSharingMode(SharingMode::Exclusive);
     builder->setCallback(this);
+    builder->setBufferCapacityInFrames(44100 * 2 * 4);
 }
 
 oboe::DataCallbackResult
@@ -122,7 +123,7 @@ AudioPlayer::onAudioReady(oboe::AudioStream *audioStream, void *audioData, int32
 //    if (!isPlaying) {
 //        return DataCallbackResult::Stop;
 //    }
-//    LOGE(LOG_TAG, "回调");
+    LOGE(LOG_TAG, "回调");
     auto *outBuffer = static_cast<uint8_t *>(audioData);
 
     pop(outBuffer, numFrames);
@@ -166,9 +167,9 @@ void AudioPlayer::pop(uint8_t *outBuffer, int num) {
                                   num,
                                   (const uint8_t **) (pFrame->data),
                                   pFrame->nb_samples);
-            int outBufferSize = av_samples_get_buffer_size(NULL, 2,
-                                                           rst,
-                                                           AV_SAMPLE_FMT_S16, 1);
+//            int outBufferSize = av_samples_get_buffer_size(NULL, 2,
+//                                                           rst,
+//                                                           AV_SAMPLE_FMT_S16, 1);
             return;
         }
 
@@ -180,7 +181,6 @@ void AudioPlayer::play() {
     LOGE(LOG_TAG, "play");
     packet = av_packet_alloc();
     pFrame = av_frame_alloc();
-    isPlaying = true;
     pSwrCtx = swr_alloc();
     //采样格式
     enum AVSampleFormat inSampleFmt = audioCodecCtx->sample_fmt;
@@ -202,7 +202,8 @@ void AudioPlayer::play() {
                        0,
                        NULL);
     swr_init(pSwrCtx);
-    int outChannelNum = av_get_channel_layout_nb_channels(outSampleChannel);
+//    int outChannelNum = av_get_channel_layout_nb_channels(outSampleChannel);
+    isPlaying = true;
     result = stream->requestStart();
     if (result != Result::OK) {
         LOGE(LOG_TAG, "请求打开流失败%s", convertToText(result));

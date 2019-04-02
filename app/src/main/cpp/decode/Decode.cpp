@@ -44,11 +44,11 @@ void Decode::prepare(const char *path) {
         LOGE("decode", "未找到视频流");
 //        return;
     }
-    std::thread decodeAudioThread(&Decode::decodeAudio, this, audioIndex);
-//    decodeAudio(audioIndex);
-    decodeAudioThread.detach();
+//    std::thread decodeAudioThread(&Decode::decodeAudio, this, audioIndex);
+//    decodeAudioThread.detach();
+    std::thread decodeVideoThread(&Decode::decodeVideo, this, videoIndex);
+    decodeVideoThread.detach();
 
-//    decodeVideo(videoIndex);
 }
 
 void Decode::decodeVideo(int videoIndex) {
@@ -116,17 +116,13 @@ void Decode::decodeAudio(int audioIndex) {
         return;
     }
     AVPacket *packet = av_packet_alloc();
-//    audioPlayer = new AudioPlayer();
     audioPlayer->channelNum = pAudioStream->codecpar->channels;
     audioPlayer->sampleRate = pAudioStream->codecpar->sample_rate;
     audioPlayer->initOboe();
     callBack->onPrepare(callBack->CHILD_THREAD, true, 0);
     while (av_read_frame(pFmtCtx, packet) >= 0) {
-//        LOGE(LOG_TAG, "streamIndex=%d,audioIndex=%d", packet->stream_index, audioIndex);
         if (packet->stream_index == audioIndex) {
             audioPlayer->setData(packet);
-//            LOGE(LOG_TAG, "开始填充数据");
-
         }
     }
 }

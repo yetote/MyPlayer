@@ -102,8 +102,11 @@ find_library( # Sets the name of the path variable.
         log)
 
 
-target_link_libraries( # Specifies the target library.
+target_link_libraries(
+        # Specifies the target library.
         native-lib
+        EGL
+        GLESv2
         oboe
         avutil
         swresample

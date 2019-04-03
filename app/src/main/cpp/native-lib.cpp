@@ -3,6 +3,8 @@
 #include "decode/Decode.h"
 #include "util/CallBack.h"
 #include <unistd.h>
+#include <android/native_window.h>
+#include <android/native_window_jni.h>
 
 Decode *decode;
 CallBack *callBack;
@@ -19,20 +21,22 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved) {
 
 extern "C"
 JNIEXPORT void JNICALL
-Java_com_example_myplayer_player_MyPlayer_prepare(JNIEnv *env, jobject instance, jstring path_) {
-    const char *path = env->GetStringUTFChars(path_, 0);
-
-    callBack = new CallBack(jvm, env, instance);
-    decode = new Decode(callBack);
-    std::thread decodeThread(&Decode::prepare, decode, path);
-    decodeThread.detach();
-    env->ReleaseStringUTFChars(path_, path);
-}extern "C"
-JNIEXPORT void JNICALL
 Java_com_example_myplayer_player_MyPlayer_play(JNIEnv *env, jobject instance) {
-    sleep(5);
-    std::thread decodeThread(&Decode::audioPlay, decode);
-    decodeThread.detach();
+//    std::thread decodeThread(&Decode::audioPlay, decode);
+//    decodeThread.detach();
 //    decode->audioPlay();
 
+}extern "C"
+JNIEXPORT void JNICALL
+Java_com_example_myplayer_player_MyPlayer_prepare(JNIEnv *env, jobject instance, jstring path_,
+                                                  jobject surface) {
+    const char *path = env->GetStringUTFChars(path_, 0);
+
+    ANativeWindow *window = ANativeWindow_fromSurface(env, surface);
+    callBack = new CallBack(jvm, env, instance);
+    decode = new Decode(callBack);
+    std::thread decodeThread(&Decode::prepare, decode, path, window);
+    decodeThread.detach();
+
+    env->ReleaseStringUTFChars(path_, path);
 }

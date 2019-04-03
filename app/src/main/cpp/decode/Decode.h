@@ -25,11 +25,13 @@ class Decode {
 public:
     int audioIndex, videoIndex;
 
-    void prepare(const char *path);
+    void prepare(const char *, ANativeWindow *);
 
     void play();
 
     void audioPlay();
+
+    void videoPlay();
 
     Decode(CallBack *callback);
 

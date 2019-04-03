@@ -8,13 +8,14 @@
 
 #include "../util/BlockQueue.h"
 #include <thread>
+#include "../util/EGLUtils.h"
 
 class VideoPlayer {
 public:
     bool isFinish;
     static bool isPushFinish;
 
-    void init();
+    void init(ANativeWindow *);
 
     void setData(AVPacket *packet);
 

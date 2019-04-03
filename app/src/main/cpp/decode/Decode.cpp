@@ -11,7 +11,7 @@
 #define  null NULL
 AudioPlayer *audioPlayer;
 
-void Decode::prepare(const char *path) {
+void Decode::prepare(const char *path, ANativeWindow *window1) {
 
     int rst = 0;
     av_register_all();
@@ -44,15 +44,16 @@ void Decode::prepare(const char *path) {
         LOGE("decode", "未找到视频流");
 //        return;
     }
+    videoPlayer->init(window1);
 //    std::thread decodeAudioThread(&Decode::decodeAudio, this, audioIndex);
 //    decodeAudioThread.detach();
-    std::thread decodeVideoThread(&Decode::decodeVideo, this, videoIndex);
-    decodeVideoThread.detach();
+//    std::thread decodeVideoThread(&Decode::decodeVideo, this, videoIndex);
+//    decodeVideoThread.detach();
 
 }
 
 void Decode::decodeVideo(int videoIndex) {
-    videoPlayer->init();
+
     int rst = 0;
     pVideoStream = pFmtCtx->streams[videoIndex];
     pVideoCodec = avcodec_find_decoder(pVideoStream->codecpar->codec_id);
@@ -191,5 +192,13 @@ void Decode::audioPlay() {
 }
 
 void Decode::decode() {
+
+}
+
+void Decode::videoPlay() {
+//    videoPlayer->play()
+}
+
+Decode::~Decode() {
 
 }

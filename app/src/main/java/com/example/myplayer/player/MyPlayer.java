@@ -1,6 +1,7 @@
 package com.example.myplayer.player;
 
 import android.util.Log;
+import android.view.Surface;
 
 import com.example.myplayer.player.listener.OnDecodeVideoDataCallback;
 import com.example.myplayer.player.listener.OnPreparedCallBack;
@@ -23,8 +24,6 @@ public class MyPlayer {
     private static final String TAG = "MyPlayer";
     OnPreparedCallBack preparedCallBack;
     OnDecodeVideoDataCallback videoDataCallback;
-
-
 
 
     void onPrepared(boolean isSuccess, int error) {
@@ -52,6 +51,7 @@ public class MyPlayer {
         this.videoDataCallback = videoDataCallback;
     }
 
-    public native void prepare(String path);
+    public native void prepare(String path, Surface surface);
+
     public native void play();
 }

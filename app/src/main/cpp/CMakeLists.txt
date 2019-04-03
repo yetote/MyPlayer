@@ -91,6 +91,7 @@ add_library( # Sets the name of the library.
         decode/Decode.cpp
         util/CallBack.cpp
         util/BlockQueue.cpp
+        util/EGLUtils.cpp
         video/VideoPlayer.cpp
         audio/AudioPlayer.cpp)
 
@@ -105,6 +106,7 @@ find_library( # Sets the name of the path variable.
 target_link_libraries(
         # Specifies the target library.
         native-lib
+        android
         EGL
         GLESv2
         oboe

@@ -92,6 +92,7 @@ add_library( # Sets the name of the library.
         util/CallBack.cpp
         util/BlockQueue.cpp
         util/EGLUtils.cpp
+        util/GLUtils.cpp
         video/VideoPlayer.cpp
         audio/AudioPlayer.cpp)
 

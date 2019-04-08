@@ -61,6 +61,11 @@ void EGLUtils::initEGL() {
         LOGE(LOG_TAG, "创建surface失败");
         return;
     }
+    result = eglMakeCurrent(eglDisplay, eglSurface, eglSurface, eglContext);
+    if (result == EGL_FALSE) {
+        LOGE(LOG_TAG, "关联egl失败");
+        return;
+    }
     LOGE(LOG_TAG, "配置egl成功,well done, boy");
 }
 

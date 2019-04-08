@@ -9,13 +9,24 @@
 #include "../util/BlockQueue.h"
 #include <thread>
 #include "../util/EGLUtils.h"
+#include "../util/GLUtils.h"
+
+extern "C"{
+#include "../ffmpeg/includes/libswscale/swscale.h"
+#include "../ffmpeg/includes/libavutil/imgutils.h"
+};
 
 class VideoPlayer {
 public:
+    VideoPlayer(const char *vertexCode, const char *fragCode, ANativeWindow *window);
+
+    ~VideoPlayer();
+
+    AVCodecContext *pVideoCodecCtx;
     bool isFinish;
     static bool isPushFinish;
 
-    void init(ANativeWindow *);
+    void init();
 
     void setData(AVPacket *packet);
 
@@ -23,10 +34,28 @@ public:
 
     void stop();
 
-    void play(AVPacket *packet1);
+    void play();
 
 private:
     static void push(AVPacket *packet);
+
+    GLfloat *vertexArr;
+    GLfloat *textureArr;
+    GLuint *textureIds = nullptr;
+
+    GLint aPosition;
+    GLint aTextureCoordinates;
+    GLint uTextureY;
+    GLint uTextureU;
+    GLint uTextureV;
+
+    GLint *uTextureArr;
+
+    void getLocation();
+
+    void draw(AVFrame *);
+
+    void bindTexture(AVFrame *);
 };
 
 

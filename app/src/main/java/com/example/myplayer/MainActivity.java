@@ -11,6 +11,7 @@ import android.widget.ImageView;
 
 import com.example.myplayer.player.MyPlayer;
 import com.example.myplayer.player.gl.MyRenderer;
+import com.example.myplayer.player.gl.utils.TextRecourseReader;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.constraintlayout.widget.ConstraintLayout;
@@ -19,14 +20,15 @@ import static android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE;
 import static android.view.View.SYSTEM_UI_FLAG_HIDE_NAVIGATION;
 
 public class MainActivity extends AppCompatActivity {
-    MyPlayer player;
-    String path;
+    private MyPlayer player;
+    private String path;
     private static final String TAG = "MainActivity";
     private ImageView start, fill;
     private SurfaceView surfaceView;
-    MyRenderer renderer;
+    private MyRenderer renderer;
     private SurfaceHolder surfaceHolder;
     private Surface surface;
+    private String vertexCode, fragCode;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -43,7 +45,8 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
-                player.prepare(path, holder.getSurface());
+
+                player.prepare(path, vertexCode, fragCode, holder.getSurface());
             }
 
             @Override
@@ -89,6 +92,8 @@ public class MainActivity extends AppCompatActivity {
 //        surfaceView.setRenderer(renderer);
         player = new MyPlayer();
         surfaceHolder = surfaceView.getHolder();
+        vertexCode = TextRecourseReader.readTextFileFromResource(this, R.raw.yuv_vertex_shader);
+        fragCode = TextRecourseReader.readTextFileFromResource(this, R.raw.yuv_frag_shader);
     }
 
 }

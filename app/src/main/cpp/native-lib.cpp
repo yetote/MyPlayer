@@ -22,21 +22,24 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved) {
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_example_myplayer_player_MyPlayer_play(JNIEnv *env, jobject instance) {
-//    std::thread decodeThread(&Decode::audioPlay, decode);
-//    decodeThread.detach();
-//    decode->audioPlay();
+    decode->play();
 
 }extern "C"
 JNIEXPORT void JNICALL
 Java_com_example_myplayer_player_MyPlayer_prepare(JNIEnv *env, jobject instance, jstring path_,
+                                                  jstring vertexCode_, jstring fragCode_,
                                                   jobject surface) {
     const char *path = env->GetStringUTFChars(path_, 0);
+    const char *vertexCode = env->GetStringUTFChars(vertexCode_, 0);
+    const char *fragCode = env->GetStringUTFChars(fragCode_, 0);
 
     ANativeWindow *window = ANativeWindow_fromSurface(env, surface);
     callBack = new CallBack(jvm, env, instance);
-    decode = new Decode(callBack);
-    std::thread decodeThread(&Decode::prepare, decode, path, window);
+    decode = new Decode(callBack, vertexCode, fragCode, window);
+    std::thread decodeThread(&Decode::prepare, decode, path);
     decodeThread.detach();
 
     env->ReleaseStringUTFChars(path_, path);
+    env->ReleaseStringUTFChars(vertexCode_, vertexCode);
+    env->ReleaseStringUTFChars(fragCode_, fragCode);
 }

@@ -51,7 +51,7 @@ public class MyPlayer {
         this.videoDataCallback = videoDataCallback;
     }
 
-    public native void prepare(String path, Surface surface);
+    public native void prepare(String path, String vertexCode, String fragCode, Surface surface);
 
     public native void play();
 }

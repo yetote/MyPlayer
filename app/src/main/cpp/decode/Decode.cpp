@@ -11,7 +11,7 @@
 #define  null NULL
 AudioPlayer *audioPlayer;
 
-void Decode::prepare(const char *path, ANativeWindow *window1) {
+void Decode::prepare(const char *path) {
 
     int rst = 0;
     av_register_all();
@@ -44,12 +44,11 @@ void Decode::prepare(const char *path, ANativeWindow *window1) {
         LOGE("decode", "未找到视频流");
 //        return;
     }
-    videoPlayer->init(window1);
 //    std::thread decodeAudioThread(&Decode::decodeAudio, this, audioIndex);
 //    decodeAudioThread.detach();
-//    std::thread decodeVideoThread(&Decode::decodeVideo, this, videoIndex);
-//    decodeVideoThread.detach();
-
+    std::thread decodeVideoThread(&Decode::decodeVideo, this, videoIndex);
+    decodeVideoThread.detach();
+    callBack->onPrepare(callBack->CHILD_THREAD, true, 0);
 }
 
 void Decode::decodeVideo(int videoIndex) {
@@ -61,17 +60,17 @@ void Decode::decodeVideo(int videoIndex) {
         LOGE("decode", "未找到视频解码器");
         return;
     }
-    pVideoCodecCtx = avcodec_alloc_context3(pVideoCodec);
-    if (pVideoCodecCtx == nullptr) {
+    videoPlayer->pVideoCodecCtx = avcodec_alloc_context3(pVideoCodec);
+    if (videoPlayer->pVideoCodecCtx == nullptr) {
         LOGE("decode", "无法获取视频解码器环境");
         return;
     }
-    rst = avcodec_parameters_to_context(pVideoCodecCtx, pVideoStream->codecpar);
+    rst = avcodec_parameters_to_context(videoPlayer->pVideoCodecCtx, pVideoStream->codecpar);
     if (rst < 0) {
         LOGE("decode", "无法复制视频解码器环境");
         return;
     }
-    rst = avcodec_open2(pVideoCodecCtx, pVideoCodec, null);
+    rst = avcodec_open2(videoPlayer->pVideoCodecCtx, pVideoCodec, null);
     if (rst != 0) {
         LOGE("decode", "打开视频解码器失败");
         return;
@@ -88,7 +87,6 @@ void Decode::decodeVideo(int videoIndex) {
         }
     }
     av_packet_free(&packet);
-    avcodec_free_context(&pVideoCodecCtx);
     videoPlayer->setState(true);
 }
 
@@ -120,7 +118,7 @@ void Decode::decodeAudio(int audioIndex) {
     audioPlayer->channelNum = pAudioStream->codecpar->channels;
     audioPlayer->sampleRate = pAudioStream->codecpar->sample_rate;
     audioPlayer->initOboe();
-    callBack->onPrepare(callBack->CHILD_THREAD, true, 0);
+//    callBack->onPrepare(callBack->CHILD_THREAD, true, 0);
     while (av_read_frame(pFmtCtx, packet) >= 0) {
         if (packet->stream_index == audioIndex) {
             audioPlayer->setData(packet);
@@ -128,63 +126,14 @@ void Decode::decodeAudio(int audioIndex) {
     }
 }
 
-Decode::Decode(CallBack *callback) {
+Decode::Decode(CallBack *callback, const char *vertexCode, const char *fragCode,
+               ANativeWindow *window) {
     this->callBack = callback;
-    videoPlayer = new VideoPlayer();
+    videoPlayer = new VideoPlayer(vertexCode, fragCode, window);
 }
 
 void Decode::play() {
-    LOGE("decode", "开始播放");
-    AVPacket *packet = av_packet_alloc();
-    AVFrame *pFrame = av_frame_alloc();
-    int num = av_image_get_buffer_size(AV_PIX_FMT_YUV420P, pFrame->width,
-                                       pFrame->height,
-                                       1);
-    uint8_t *buffer = static_cast<uint8_t *>(av_malloc(num * sizeof(uint8_t)));
-    av_image_fill_arrays(pFrame->data,
-                         pFrame->linesize,
-                         buffer,
-                         AV_PIX_FMT_YUV420P,
-                         pFrame->width,
-                         pFrame->height,
-                         1);
-//    SwsContext *swsContext = sws_getContext(pVideoCodecCtx->width,
-//                                            pVideoCodecCtx->height,
-//                                            pVideoCodecCtx->pix_fmt,
-//                                            pVideoCodecCtx->width,
-//                                            pVideoCodecCtx->height,
-//                                            AV_PIX_FMT_YUV420P,
-//                                            SWS_BICUBIC,
-//                                            null, null, null);
-    while (!videoPlayer->isFinish) {
-        int rst;
-        videoPlayer->play(packet);
-        rst = avcodec_send_packet(pVideoCodecCtx, packet);
-        if (rst < 0) {
-            LOGE("decode", "发送packet失败，错误码%d", rst);
-            continue;
-        }
-        while (rst >= 0) {
-            rst = avcodec_receive_frame(pVideoCodecCtx, pFrame);
-            LOGE("decode", "接受%d", rst);
-            if (rst == AVERROR(EAGAIN)) {
-                LOGE("decode", "%s", "读取解码数据失败");
-                break;
-            } else if (rst == AVERROR_EOF) {
-                LOGE("decode", "%s", "EOF解码完成");
-                break;
-            } else if (rst < 0) {
-                LOGE("decode", "%s", "解码出错");
-                break;
-            }
-        }
-//        sws_scale(swsContext, pFrame->data, pFrame->linesize, 0, pFrame->height,
-//                  pFrame->data, pFrame->linesize);
-        LOGE("decode", "format%d", pFrame->format == AV_PIX_FMT_YUV420P);
-    }
-    LOGE("decode", "解码完成");
-    av_packet_free(&packet);
-
+    videoPlayer->play();
 }
 
 void Decode::audioPlay() {

@@ -21,15 +21,16 @@ public:
 
     ~EGLUtils();
 
+    EGLDisplay eglDisplay;
+    EGLSurface eglSurface;
 private:
 
     ANativeWindow *window;
-    EGLDisplay eglDisplay;
     EGLContext eglContext;
     EGLConfig eglConfig;
-    EGLSurface eglSurface;
 
     void initEGL();
+
     void destroyEGL();
 };
 

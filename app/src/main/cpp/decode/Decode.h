@@ -25,7 +25,7 @@ class Decode {
 public:
     int audioIndex, videoIndex;
 
-    void prepare(const char *, ANativeWindow *);
+    void prepare(const char *);
 
     void play();
 
@@ -33,7 +33,8 @@ public:
 
     void videoPlay();
 
-    Decode(CallBack *callback);
+    Decode(CallBack *, const char *, const char *,
+           ANativeWindow *);
 
     ~Decode();
 
@@ -46,10 +47,8 @@ private:
 
     AVFrame *pFrame = nullptr;
 
-    AVCodecContext *pAudioCodecCtx = nullptr;
     AVCodec *pAudioCodec = nullptr;
 
-    AVCodecContext *pVideoCodecCtx = nullptr;
     AVCodec *pVideoCodec = nullptr;
     VideoPlayer *videoPlayer;
 

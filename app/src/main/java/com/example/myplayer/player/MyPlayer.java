@@ -53,5 +53,5 @@ public class MyPlayer {
 
     public native void prepare(String path, String vertexCode, String fragCode, Surface surface);
 
-    public native void play();
+    public native void play(int w, int h);
 }

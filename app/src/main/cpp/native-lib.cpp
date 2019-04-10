@@ -18,13 +18,7 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved) {
     }
     return JNI_VERSION_1_6;
 }
-
 extern "C"
-JNIEXPORT void JNICALL
-Java_com_example_myplayer_player_MyPlayer_play(JNIEnv *env, jobject instance) {
-    decode->play();
-
-}extern "C"
 JNIEXPORT void JNICALL
 Java_com_example_myplayer_player_MyPlayer_prepare(JNIEnv *env, jobject instance, jstring path_,
                                                   jstring vertexCode_, jstring fragCode_,
@@ -35,11 +29,17 @@ Java_com_example_myplayer_player_MyPlayer_prepare(JNIEnv *env, jobject instance,
 
     ANativeWindow *window = ANativeWindow_fromSurface(env, surface);
     callBack = new CallBack(jvm, env, instance);
-    decode = new Decode(callBack, vertexCode, fragCode, window);
-    std::thread decodeThread(&Decode::prepare, decode, path);
+    decode = new Decode(callBack);
+    std::thread decodeThread(&Decode::prepare, decode, path,vertexCode,fragCode,window);
     decodeThread.detach();
 
-    env->ReleaseStringUTFChars(path_, path);
-    env->ReleaseStringUTFChars(vertexCode_, vertexCode);
-    env->ReleaseStringUTFChars(fragCode_, fragCode);
+//    env->ReleaseStringUTFChars(path_, path);
+//    env->ReleaseStringUTFChars(vertexCode_, vertexCode);
+//    env->ReleaseStringUTFChars(fragCode_, fragCode);
+}extern "C"
+JNIEXPORT void JNICALL
+Java_com_example_myplayer_player_MyPlayer_play(JNIEnv *env, jobject instance, jint w, jint h) {
+
+    decode->play(w,h);
+
 }

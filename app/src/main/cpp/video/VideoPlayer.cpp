@@ -3,7 +3,9 @@
 //
 
 
+
 #include "VideoPlayer.h"
+
 
 
 static BlockQueue videoQueue;
@@ -37,6 +39,14 @@ void VideoPlayer::init() {
             1.0F, 1.0F,
             1.0F, 0.0F
     };
+     colorArr = new GLfloat[18]{
+            0.0F, 0.0F, 0.0F,
+            0.0F, 0.0F, 1.0F,
+            0.0F, 1.0F, 0.0F,
+            0.0F, 1.0F, 0.0F,
+            1.0F, 1.0F, 0.0F,
+            1.0F, 1.0F, 1.0F
+    };
     //    @formatter:on
 
     textureIds = glUtils->createTexture();
@@ -46,47 +56,59 @@ void VideoPlayer::init() {
     }
 
     getLocation();
-    glClearColor(0.0F, 0.0F, 0.0F, 0.0F);
-    videoQueue.init();
+    glClearColor(1.0F, 0.0F, 1.0F, 0.0F);
 }
 
-void VideoPlayer::draw(AVFrame *pFrame) {
+void VideoPlayer::drawFrame(AVFrame *frame) {
+    LOGE(LOG_TAG, "开始绘制");
     glClear(GL_COLOR_BUFFER_BIT || GL_DEPTH_BUFFER_BIT);
     glUseProgram(glUtils->program);
-    bindTexture(pFrame);
+    bindTexture(frame);
+
     glVertexAttribPointer(aPosition, 2, GL_FLOAT, GL_FALSE, 0, vertexArr);
     glEnableVertexAttribArray(aPosition);
     glVertexAttribPointer(aTextureCoordinates, 2, GL_FLOAT, GL_FALSE, 0, textureArr);
     glEnableVertexAttribArray(aTextureCoordinates);
+
     glDrawArrays(GL_TRIANGLES, 0, 6);
     eglSwapBuffers(eglUtils->eglDisplay, eglUtils->eglSurface);
 }
 
 
-void VideoPlayer::play() {
+void VideoPlayer::play(int w, int h) {
+    //todo 花屏 怀疑是队列的问题
+    eglUtils = new EGLUtils(window);
+    glUtils = new GLUtils(vertexCode, fragCode);
+    init();
     LOGE(LOG_TAG, "开始播放");
-//    videoQueue.pop(packet1);
+    glViewport(0, 0, w, h);
     isFinish = videoQueue.isFinish;
     AVPacket *packet = av_packet_alloc();
     AVFrame *pFrame = av_frame_alloc();
     int rst;
+
     while (!isFinish) {
         videoQueue.pop(packet);
         rst = avcodec_send_packet(pVideoCodecCtx, packet);
         while (rst >= 0) {
             rst = avcodec_receive_frame(pVideoCodecCtx, pFrame);
             if (rst == AVERROR(EAGAIN)) {
+                av_usleep(1000);
                 LOGE(LOG_TAG, "%s", "读取解码数据失败");
-                break;
+                continue;
             } else if (rst == AVERROR_EOF) {
+                av_usleep(1000);
                 LOGE(LOG_TAG, "%s", "EOF解码完成");
                 break;
             } else if (rst < 0) {
+                av_usleep(1000);
                 LOGE(LOG_TAG, "%s", "解码出错");
-                break;
+                continue;
             }
+
             if (pFrame->format == AV_PIX_FMT_YUV420P) {
                 LOGE(LOG_TAG, "获取frame成功,解码后的格式是YUV420P");
+                drawFrame(pFrame);
             } else {
                 LOGE(LOG_TAG, "获取frame成功,格式为%d", pFrame->format);
                 AVFrame *pFrame420P = av_frame_alloc();
@@ -116,13 +138,14 @@ void VideoPlayer::play() {
                           pFrame->height,
                           pFrame420P->data,
                           pFrame420P->linesize);
+                drawFrame(pFrame420P);
                 av_frame_free(&pFrame420P);
                 av_free(pFrame420P);
                 av_free(buffer);
-                pFrame420P = null;
+                pFrame420P = nullptr;
                 sws_freeContext(swsContext);
             }
-            draw(pFrame);
+            av_usleep(1000);
         }
     }
 }
@@ -132,8 +155,10 @@ void VideoPlayer::setState(bool isPush) {
 }
 
 VideoPlayer::VideoPlayer(const char *vertexCode, const char *fragCode, ANativeWindow *window) {
-    eglUtils = new EGLUtils(window);
-    glUtils = new GLUtils(vertexCode, fragCode);
+    this->vertexCode = vertexCode;
+    this->fragCode = fragCode;
+    this->window = window;
+    videoQueue.init();
 
 }
 
@@ -149,11 +174,13 @@ VideoPlayer::~VideoPlayer() {
 }
 
 void VideoPlayer::getLocation() {
-    aPosition = glGetAttribLocation(glUtils->program, "a_position");
+    aPosition = glGetAttribLocation(glUtils->program, "a_Position");
+//    aColor = glGetAttribLocation(glUtils->program, "a_Color");
     aTextureCoordinates = glGetAttribLocation(glUtils->program, "a_TextureCoordinates");
     uTextureY = glGetUniformLocation(glUtils->program, "u_TextureY");
     uTextureU = glGetUniformLocation(glUtils->program, "u_TextureU");
     uTextureV = glGetUniformLocation(glUtils->program, "u_TextureV");
+
     uTextureArr = new GLint[3]{
             uTextureY, uTextureU, uTextureV
     };
@@ -163,19 +190,23 @@ void VideoPlayer::stop() {
 
 }
 
-void VideoPlayer::bindTexture(AVFrame *pFrame) {
+void VideoPlayer::bindTexture(AVFrame *frame) {
     for (int i = 0; i < 3; ++i) {
         glActiveTexture(GL_TEXTURE0 + i);
         glBindTexture(GL_TEXTURE_2D, textureIds[i]);
         if (i == 0) {
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, pFrame->width, pFrame->height, 0,
-                         GL_LUMINANCE, GL_UNSIGNED_BYTE, pFrame->data[i]);
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, frame->width, frame->height, 0,
+                         GL_LUMINANCE, GL_UNSIGNED_BYTE, frame->data[i]);
         } else {
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, pFrame->width / 2, pFrame->height / 2, 0,
-                         GL_LUMINANCE, GL_UNSIGNED_BYTE, pFrame->data[i]);
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, frame->width / 2, frame->height / 2, 0,
+                         GL_LUMINANCE, GL_UNSIGNED_BYTE, frame->data[i]);
         }
         glUniform1i(uTextureArr[i], i);
     }
+}
+
+void VideoPlayer::showFrame(AVFrame *pFrame) {
+    LOGE(LOG_TAG, "width=%d", pFrame->width);
 }
 
 

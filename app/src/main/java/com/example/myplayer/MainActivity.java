@@ -29,6 +29,7 @@ public class MainActivity extends AppCompatActivity {
     private SurfaceHolder surfaceHolder;
     private Surface surface;
     private String vertexCode, fragCode;
+    private int w, h;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -45,7 +46,8 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
-
+                w = width;
+                h = height;
                 player.prepare(path, vertexCode, fragCode, holder.getSurface());
             }
 
@@ -68,7 +70,7 @@ public class MainActivity extends AppCompatActivity {
                 Log.e(TAG, "onPrepared: ffmpeg初始化失败,错误代码：" + errorCode);
             } else {
                 Log.e(TAG, "onPrepared: 准备成功");
-                player.play();
+                player.play(w, h);
             }
         });
     }

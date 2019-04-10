@@ -120,9 +120,6 @@ void AudioPlayer::setBuilderParams(AudioStreamBuilder *builder) {
 
 oboe::DataCallbackResult
 AudioPlayer::onAudioReady(oboe::AudioStream *audioStream, void *audioData, int32_t numFrames) {
-//    if (!isPlaying) {
-//        return DataCallbackResult::Stop;
-//    }
     LOGE(LOG_TAG, "回调");
     auto *outBuffer = static_cast<uint8_t *>(audioData);
 
@@ -141,9 +138,7 @@ void AudioPlayer::push(AVPacket *packet) {
 }
 
 void AudioPlayer::pop(uint8_t *outBuffer, int num) {
-//    outBuffer = static_cast<uint8_t *>(av_malloc(MAX_AUDIO_FRAME_SIZE));
-//    packet = av_packet_alloc();
-
+    //todo 杂音，怀疑是oboe缓冲区或者队列的问题
     while (isPlaying) {
         audioQueue.pop(packet);
         int ret;
@@ -167,9 +162,6 @@ void AudioPlayer::pop(uint8_t *outBuffer, int num) {
                                   num,
                                   (const uint8_t **) (pFrame->data),
                                   pFrame->nb_samples);
-//            int outBufferSize = av_samples_get_buffer_size(NULL, 2,
-//                                                           rst,
-//                                                           AV_SAMPLE_FMT_S16, 1);
             return;
         }
 

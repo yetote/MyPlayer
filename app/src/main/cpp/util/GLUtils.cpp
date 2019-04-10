@@ -47,7 +47,7 @@ GLuint GLUtils::loadShader(GLenum type, const char *code) {
         char szLog[1024] = {0};
         GLsizei logLen = 0;
         glGetShaderInfoLog(shader, 1024, &logLen, szLog);
-        LOGE(LOG_TAG, "加载着色器代码失败:  ,shader code:%s", code);
+        LOGE(LOG_TAG,"加载着色器代码失败: %s ,shader code:%s", szLog, code);
         glDeleteShader(shader);
         return 0;
     }

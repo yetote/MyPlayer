@@ -25,16 +25,16 @@ class Decode {
 public:
     int audioIndex, videoIndex;
 
-    void prepare(const char *);
+    void prepare(const char *path, const char *vertexCode, const char *fragCode,
+                 ANativeWindow *window);
 
-    void play();
+    void play(int w,int h);
 
     void audioPlay();
 
     void videoPlay();
 
-    Decode(CallBack *, const char *, const char *,
-           ANativeWindow *);
+    Decode(CallBack *);
 
     ~Decode();
 
@@ -52,7 +52,9 @@ private:
     AVCodec *pVideoCodec = nullptr;
     VideoPlayer *videoPlayer;
 
-    void decodeVideo(int videoIndex);
+
+    void decodeVideo(int videoIndex, const char *vertexCode, const char *fragCode,
+                     ANativeWindow *window);
 
     void decodeAudio(int audioIndex);
 

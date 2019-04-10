@@ -11,7 +11,8 @@
 #define  null NULL
 AudioPlayer *audioPlayer;
 
-void Decode::prepare(const char *path) {
+void Decode::prepare(const char *path, const char *vertexCode, const char *fragCode,
+                     ANativeWindow *window) {
 
     int rst = 0;
     av_register_all();
@@ -46,13 +47,14 @@ void Decode::prepare(const char *path) {
     }
 //    std::thread decodeAudioThread(&Decode::decodeAudio, this, audioIndex);
 //    decodeAudioThread.detach();
-    std::thread decodeVideoThread(&Decode::decodeVideo, this, videoIndex);
+    std::thread decodeVideoThread(&Decode::decodeVideo, this, videoIndex,vertexCode,fragCode,window);
     decodeVideoThread.detach();
     callBack->onPrepare(callBack->CHILD_THREAD, true, 0);
 }
 
-void Decode::decodeVideo(int videoIndex) {
-
+void Decode::decodeVideo(int videoIndex, const char *vertexCode, const char *fragCode,
+                         ANativeWindow *window) {
+    videoPlayer = new VideoPlayer(vertexCode,fragCode,window);
     int rst = 0;
     pVideoStream = pFmtCtx->streams[videoIndex];
     pVideoCodec = avcodec_find_decoder(pVideoStream->codecpar->codec_id);
@@ -83,7 +85,7 @@ void Decode::decodeVideo(int videoIndex) {
             videoPlayer->setData(packet);
             i++;
             LOGE("decode", "解码了%d帧", i);
-            av_usleep(30000);
+            av_usleep(20000);
         }
     }
     av_packet_free(&packet);
@@ -126,14 +128,13 @@ void Decode::decodeAudio(int audioIndex) {
     }
 }
 
-Decode::Decode(CallBack *callback, const char *vertexCode, const char *fragCode,
-               ANativeWindow *window) {
+Decode::Decode(CallBack *callback) {
     this->callBack = callback;
-    videoPlayer = new VideoPlayer(vertexCode, fragCode, window);
+//    videoPlayer = new VideoPlayer(vertexCode, fragCode, window);
 }
 
-void Decode::play() {
-    videoPlayer->play();
+void Decode::play(int w,int h) {
+    videoPlayer->play(w,h);
 }
 
 void Decode::audioPlay() {

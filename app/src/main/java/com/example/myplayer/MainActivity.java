@@ -73,11 +73,13 @@ public class MainActivity extends AppCompatActivity {
                 player.play(w, h);
             }
         });
+
+        player.setFinishCallBack(() -> {
+            Log.e(TAG, "callback: 播放结束");
+        });
     }
 
     private void click() {
-//        start.setOnClickListener(v -> player.prepare(path));
-
         fill.setOnClickListener(v -> {
             setRequestedOrientation(SCREEN_ORIENTATION_LANDSCAPE);
             MainActivity.this.getWindow().getDecorView().setSystemUiVisibility(SYSTEM_UI_FLAG_HIDE_NAVIGATION);

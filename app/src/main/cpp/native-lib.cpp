@@ -5,10 +5,12 @@
 #include <unistd.h>
 #include <android/native_window.h>
 #include <android/native_window_jni.h>
+#include "util/PlayerStatus.h"
 
 Decode *decode;
 CallBack *callBack;
 JavaVM *jvm;
+PlayerStatus *playerStatus;
 
 JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved) {
     JNIEnv *env;
@@ -18,6 +20,7 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved) {
     }
     return JNI_VERSION_1_6;
 }
+
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_example_myplayer_player_MyPlayer_prepare(JNIEnv *env, jobject instance, jstring path_,
@@ -29,10 +32,10 @@ Java_com_example_myplayer_player_MyPlayer_prepare(JNIEnv *env, jobject instance,
 
     ANativeWindow *window = ANativeWindow_fromSurface(env, surface);
     callBack = new CallBack(jvm, env, instance);
-    decode = new Decode(callBack);
-    std::thread decodeThread(&Decode::prepare, decode, path,vertexCode,fragCode,window);
+    playerStatus = new PlayerStatus(callBack);
+    decode = new Decode(playerStatus);
+    std::thread decodeThread(&Decode::prepare, decode, path, vertexCode, fragCode, window);
     decodeThread.detach();
-
 //    env->ReleaseStringUTFChars(path_, path);
 //    env->ReleaseStringUTFChars(vertexCode_, vertexCode);
 //    env->ReleaseStringUTFChars(fragCode_, fragCode);
@@ -40,6 +43,6 @@ Java_com_example_myplayer_player_MyPlayer_prepare(JNIEnv *env, jobject instance,
 JNIEXPORT void JNICALL
 Java_com_example_myplayer_player_MyPlayer_play(JNIEnv *env, jobject instance, jint w, jint h) {
 
-    decode->play(w,h);
+    decode->play(w, h);
 
 }

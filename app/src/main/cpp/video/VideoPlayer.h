@@ -20,7 +20,8 @@ extern "C" {
 
 class VideoPlayer {
 public:
-    VideoPlayer(const char *vertexCode, const char *fragCode, ANativeWindow *window);
+    VideoPlayer(PlayerStatus *, const char *vertexCode, const char *fragCode,
+                ANativeWindow *);
 
     ~VideoPlayer();
 
@@ -39,7 +40,7 @@ public:
     void play(int w, int h);
 
 private:
-    static void push(AVPacket *packet);
+    PlayerStatus *playerStatus;
 
     GLfloat *vertexArr;
     GLfloat *textureArr;
@@ -59,6 +60,8 @@ private:
     const char *fragCode;
     ANativeWindow *window;
 
+    static void push(AVPacket *packet);
+
     void getLocation();
 
     void drawFrame(AVFrame *);
@@ -66,6 +69,7 @@ private:
     void bindTexture(AVFrame *frame);
 
     void showFrame(AVFrame *pFrame);
+
 };
 
 

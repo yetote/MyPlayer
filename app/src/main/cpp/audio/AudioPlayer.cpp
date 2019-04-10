@@ -103,8 +103,8 @@ void AudioPlayer::initOboe() {
 
 }
 
-AudioPlayer::AudioPlayer() {
-    isPlaying = false;
+AudioPlayer::AudioPlayer(PlayerStatus *playerStatus) {
+    this->playerStatus = playerStatus;
 }
 
 void AudioPlayer::setBuilderParams(AudioStreamBuilder *builder) {
@@ -121,11 +121,15 @@ void AudioPlayer::setBuilderParams(AudioStreamBuilder *builder) {
 oboe::DataCallbackResult
 AudioPlayer::onAudioReady(oboe::AudioStream *audioStream, void *audioData, int32_t numFrames) {
     LOGE(LOG_TAG, "回调");
+
     auto *outBuffer = static_cast<uint8_t *>(audioData);
-
-    pop(outBuffer, numFrames);
-
-    return DataCallbackResult::Continue;
+    DataCallbackResult res = pop(outBuffer, numFrames);
+//    pop(outBuffer, numFrames);
+    if (res == DataCallbackResult::Stop) {
+        playerStatus->setAudioPlayFinish(true);
+        playerStatus->checkFinish();
+    }
+    return res;
 }
 
 void AudioPlayer::setData(AVPacket *packet) {
@@ -137,10 +141,12 @@ void AudioPlayer::push(AVPacket *packet) {
     audioQueue.push(packet);
 }
 
-void AudioPlayer::pop(uint8_t *outBuffer, int num) {
+
+oboe::DataCallbackResult AudioPlayer::pop(uint8_t *outBuffer, int num) {
     //todo 杂音，怀疑是oboe缓冲区或者队列的问题
-    while (isPlaying) {
-        audioQueue.pop(packet);
+    bool isFinish;
+    do {
+        isFinish = audioQueue.pop(packet);
         int ret;
         ret = avcodec_send_packet(audioCodecCtx, packet);
         LOGE(LOG_TAG, "%d", ret);
@@ -162,10 +168,11 @@ void AudioPlayer::pop(uint8_t *outBuffer, int num) {
                                   num,
                                   (const uint8_t **) (pFrame->data),
                                   pFrame->nb_samples);
-            return;
+            return DataCallbackResult::Continue;
         }
 
-    }
+    } while (!isFinish);
+    return DataCallbackResult::Stop;
 }
 
 

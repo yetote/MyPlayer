@@ -22,6 +22,8 @@ public:
 
     void onPrepare(THREAD_TYPE threadType, bool isSuccess, int errorCode);
 
+    void onFinish(THREAD_TYPE threadType);
+
     bool isDecode;
     bool isFinish;
 
@@ -32,6 +34,7 @@ private:
     jclass jlz;
 
     jmethodID preparedId;
+    jmethodID finishId;
 };
 
 

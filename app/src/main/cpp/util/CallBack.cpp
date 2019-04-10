@@ -10,6 +10,7 @@ CallBack::CallBack(JavaVM *jvmParam, JNIEnv *envParam, jobject objParam) {
     this->obj = env->NewGlobalRef(objParam);
     jlz = env->GetObjectClass(obj);
     preparedId = env->GetMethodID(jlz, "onPrepared", "(ZI)V");
+    finishId = env->GetMethodID(jlz, "onFinish", "()V");
     isDecode = false;
     isFinish = false;
 }
@@ -25,4 +26,21 @@ void CallBack::onPrepare(CallBack::THREAD_TYPE threadType, bool isSuccess, int e
         jvm->DetachCurrentThread();
     }
 }
+
+void CallBack::onFinish(CallBack::THREAD_TYPE threadType) {
+    if (threadType == MAIN_THREAD) {
+        env->CallVoidMethod(obj, finishId);
+    } else {
+        JNIEnv *env;
+        jvm->AttachCurrentThread(&env, 0);
+        env->CallVoidMethod(obj, finishId);
+        jvm->DetachCurrentThread();
+    }
+}
+
+CallBack::~CallBack() {
+
+}
+
+
 

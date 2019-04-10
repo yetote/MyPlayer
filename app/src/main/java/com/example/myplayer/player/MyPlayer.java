@@ -4,6 +4,7 @@ import android.util.Log;
 import android.view.Surface;
 
 import com.example.myplayer.player.listener.OnDecodeVideoDataCallback;
+import com.example.myplayer.player.listener.OnFinishCallBack;
 import com.example.myplayer.player.listener.OnPreparedCallBack;
 
 /**
@@ -24,7 +25,7 @@ public class MyPlayer {
     private static final String TAG = "MyPlayer";
     OnPreparedCallBack preparedCallBack;
     OnDecodeVideoDataCallback videoDataCallback;
-
+    OnFinishCallBack finishCallBack;
 
     void onPrepared(boolean isSuccess, int error) {
         if (preparedCallBack != null) {
@@ -42,6 +43,13 @@ public class MyPlayer {
         }
     }
 
+    void onFinish() {
+        if (finishCallBack != null) {
+            finishCallBack.onFinish();
+        } else {
+            Log.e(TAG, "onPrepared: " + "无法该回调接口");
+        }
+    }
 
     public void setPreparedCallBack(OnPreparedCallBack preparedCallBack) {
         this.preparedCallBack = preparedCallBack;
@@ -49,6 +57,10 @@ public class MyPlayer {
 
     public void setVideoDataCallback(OnDecodeVideoDataCallback videoDataCallback) {
         this.videoDataCallback = videoDataCallback;
+    }
+
+    public void setFinishCallBack(OnFinishCallBack finishCallBack) {
+        this.finishCallBack = finishCallBack;
     }
 
     public native void prepare(String path, String vertexCode, String fragCode, Surface surface);

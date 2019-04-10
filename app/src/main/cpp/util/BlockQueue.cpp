@@ -4,6 +4,9 @@
 
 #include "BlockQueue.h"
 
+static BlockQueue::Type type;
+static PlayerStatus *playerStatus;
+
 void BlockQueue::push(AVPacket *packet) {
     std::unique_lock<decltype(mutex)> lock(mutex);
     while (queue.size() >= 100) {
@@ -15,9 +18,14 @@ void BlockQueue::push(AVPacket *packet) {
     cond.notify_all();
 }
 
-void BlockQueue::pop(AVPacket *packet1) {
+bool BlockQueue::pop(AVPacket *packet1) {
     std::unique_lock<decltype(mutex)> lock(mutex);
-    if (queue.empty()) {
+
+    if (getStatus && queue.empty()) {
+        LOGE("blockQueue", "播放完成");
+        cond.notify_all();
+        return true;
+    } else if (!getStatus && queue.empty()) {
         LOGE("blockQueue", "the messagequeue is empty ,waiting producer add message ");
         cond.wait(lock);
     } else {
@@ -26,23 +34,30 @@ void BlockQueue::pop(AVPacket *packet1) {
         queue.pop();
     }
     cond.notify_all();
-    if (isPushFinish && queue.empty()) {
-        isFinish = true;
-    }
-
+    return false;
 }
 
-void BlockQueue::init() {
+void BlockQueue::init(PlayerStatus *playerStatus, BlockQueue::Type type) {
     packet = av_packet_alloc();
+    type = type;
+    playerStatus = playerStatus;
 }
 
 void BlockQueue::stop() {
     av_packet_free(&packet);
 }
 
-void BlockQueue::setState(bool isPush) {
-    std::unique_lock<decltype(mutex)> lock(mutex);
-    isPushFinish = isPush;
-    cond.notify_all();
+
+bool BlockQueue::getStatus() {
+    if (BlockQueue::type == AUDIO_QUEUE) {
+        return playerStatus->isAudioDecodeFinish();
+    }
+    return playerStatus->isVideoDecodeFinish();
+
 }
+
+BlockQueue::BlockQueue(PlayerStatus *playerStatus, BlockQueue::Type type) {
+
+}
+
 

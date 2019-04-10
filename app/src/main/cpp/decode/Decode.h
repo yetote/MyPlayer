@@ -9,7 +9,9 @@
 #include "../util/Log.h"
 #include "../util/CallBack.h"
 #include "../video/VideoPlayer.h"
+#include "../util/PlayerStatus.h"
 #include <pthread.h>
+#include "../audio/AudioPlayer.h"
 
 extern "C" {
 #include "../ffmpeg/includes/libavformat/avformat.h"
@@ -28,18 +30,18 @@ public:
     void prepare(const char *path, const char *vertexCode, const char *fragCode,
                  ANativeWindow *window);
 
-    void play(int w,int h);
+    void play(int w, int h);
 
     void audioPlay();
 
     void videoPlay();
 
-    Decode(CallBack *);
+    Decode( PlayerStatus *);
 
     ~Decode();
 
 private:
-    CallBack *callBack;
+    PlayerStatus *playerStatus;
     AVFormatContext *pFmtCtx = nullptr;
 
     AVStream *pAudioStream = nullptr;

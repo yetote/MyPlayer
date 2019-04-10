@@ -7,7 +7,6 @@
 #include "VideoPlayer.h"
 
 
-
 static BlockQueue videoQueue;
 EGLUtils *eglUtils;
 GLUtils *glUtils;
@@ -82,13 +81,12 @@ void VideoPlayer::play(int w, int h) {
     init();
     LOGE(LOG_TAG, "开始播放");
     glViewport(0, 0, w, h);
-    isFinish = videoQueue.isFinish;
     AVPacket *packet = av_packet_alloc();
     AVFrame *pFrame = av_frame_alloc();
     int rst;
-
-    while (!isFinish) {
-        videoQueue.pop(packet);
+    bool isFinish;
+    do {
+        isFinish = videoQueue.pop(packet);
         rst = avcodec_send_packet(pVideoCodecCtx, packet);
         while (rst >= 0) {
             rst = avcodec_receive_frame(pVideoCodecCtx, pFrame);
@@ -147,18 +145,19 @@ void VideoPlayer::play(int w, int h) {
             }
             av_usleep(1000);
         }
-    }
+    } while (!isFinish);
+    playerStatus->setVideoPlayFinish(true);
+    playerStatus->checkFinish();
 }
 
-void VideoPlayer::setState(bool isPush) {
-    videoQueue.setState(isPush);
-}
 
-VideoPlayer::VideoPlayer(const char *vertexCode, const char *fragCode, ANativeWindow *window) {
+VideoPlayer::VideoPlayer(PlayerStatus *playerStatus, const char *vertexCode, const char *fragCode,
+                         ANativeWindow *window) {
     this->vertexCode = vertexCode;
     this->fragCode = fragCode;
     this->window = window;
-    videoQueue.init();
+    this->playerStatus = playerStatus;
+    videoQueue.init(playerStatus, videoQueue.VIDEO_QUEUE);
 
 }
 

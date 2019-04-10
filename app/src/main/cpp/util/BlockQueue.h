@@ -6,6 +6,7 @@
 #define MYPLAYER_BLOCKQUEUE_H
 
 #include "Log.h"
+#include "PlayerStatus.h"
 
 #include <queue>
 #include <mutex>
@@ -17,23 +18,27 @@ extern "C" {
 
 class BlockQueue {
 public:
+    static enum Type {
+        AUDIO_QUEUE,
+        VIDEO_QUEUE
+    };
 
-    bool isPushFinish;
-    bool isFinish;
-
-    void setState(bool isPush);
 
     void push(AVPacket *packet);
 
-    void init();
+    void init(PlayerStatus *playerStatus, BlockQueue::Type type);
 
-    void pop(AVPacket *packet1);
+    bool pop(AVPacket *packet1);
+
 
 private:
     AVPacket *packet;
     std::queue<AVPacket *> queue;
     std::condition_variable cond;
     std::mutex mutex;
+
+
+    static bool getStatus();
 
     void stop();
 };

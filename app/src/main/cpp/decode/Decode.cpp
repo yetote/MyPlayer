@@ -5,7 +5,6 @@
 
 
 #include "Decode.h"
-#include "../audio/AudioPlayer.h"
 
 
 #define  null NULL
@@ -45,16 +44,16 @@ void Decode::prepare(const char *path, const char *vertexCode, const char *fragC
         LOGE("decode", "未找到视频流");
 //        return;
     }
-//    std::thread decodeAudioThread(&Decode::decodeAudio, this, audioIndex);
-//    decodeAudioThread.detach();
-    std::thread decodeVideoThread(&Decode::decodeVideo, this, videoIndex,vertexCode,fragCode,window);
+    std::thread decodeAudioThread(&Decode::decodeAudio, this, audioIndex);
+    decodeAudioThread.detach();
+    std::thread decodeVideoThread(&Decode::decodeVideo, this, videoIndex, vertexCode, fragCode,
+                                  window);
     decodeVideoThread.detach();
-    callBack->onPrepare(callBack->CHILD_THREAD, true, 0);
 }
 
 void Decode::decodeVideo(int videoIndex, const char *vertexCode, const char *fragCode,
                          ANativeWindow *window) {
-    videoPlayer = new VideoPlayer(vertexCode,fragCode,window);
+    videoPlayer = new VideoPlayer(playerStatus, vertexCode, fragCode, window);
     int rst = 0;
     pVideoStream = pFmtCtx->streams[videoIndex];
     pVideoCodec = avcodec_find_decoder(pVideoStream->codecpar->codec_id);
@@ -80,6 +79,8 @@ void Decode::decodeVideo(int videoIndex, const char *vertexCode, const char *fra
 
     AVPacket *packet = av_packet_alloc();
     int i = 0;
+    playerStatus->setVideoPrepare(true);
+    playerStatus->checkPrepare();
     while (av_read_frame(pFmtCtx, packet) >= 0) {
         if (packet->stream_index == videoIndex) {
             videoPlayer->setData(packet);
@@ -88,12 +89,13 @@ void Decode::decodeVideo(int videoIndex, const char *vertexCode, const char *fra
             av_usleep(20000);
         }
     }
+    playerStatus->setVideoDecodeFinish(true);
     av_packet_free(&packet);
-    videoPlayer->setState(true);
+//    videoPlayer->setState(true);
 }
 
 void Decode::decodeAudio(int audioIndex) {
-    audioPlayer = new AudioPlayer();
+    audioPlayer = new AudioPlayer(playerStatus);
     int rst = 0;
     pAudioStream = pFmtCtx->streams[audioIndex];
     pAudioCodec = avcodec_find_decoder(pAudioStream->codecpar->codec_id);
@@ -120,21 +122,24 @@ void Decode::decodeAudio(int audioIndex) {
     audioPlayer->channelNum = pAudioStream->codecpar->channels;
     audioPlayer->sampleRate = pAudioStream->codecpar->sample_rate;
     audioPlayer->initOboe();
+    playerStatus->setAudioPrepare(true);
+    playerStatus->checkPrepare();
 //    callBack->onPrepare(callBack->CHILD_THREAD, true, 0);
     while (av_read_frame(pFmtCtx, packet) >= 0) {
         if (packet->stream_index == audioIndex) {
             audioPlayer->setData(packet);
         }
     }
+    playerStatus->setAudioDecodeFinish(true);
 }
 
-Decode::Decode(CallBack *callback) {
-    this->callBack = callback;
+Decode::Decode(PlayerStatus *playerStatus) {
+    this->playerStatus = playerStatus;
 //    videoPlayer = new VideoPlayer(vertexCode, fragCode, window);
 }
 
-void Decode::play(int w,int h) {
-    videoPlayer->play(w,h);
+void Decode::play(int w, int h) {
+    videoPlayer->play(w, h);
 }
 
 void Decode::audioPlay() {

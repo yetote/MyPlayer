@@ -32,7 +32,7 @@ public:
 
     AVCodecContext *audioCodecCtx;
 
-    AudioPlayer();
+    AudioPlayer(PlayerStatus *);
 
     ~AudioPlayer();
 
@@ -51,13 +51,14 @@ private:
     AVFrame *pFrame;
     SwrContext *pSwrCtx;
     AudioStream *stream;
+    PlayerStatus *playerStatus;
 
     DataCallbackResult
     onAudioReady(oboe::AudioStream *audioStream, void *audioData, int32_t numFrames);
 
     void setBuilderParams(AudioStreamBuilder *pBuilder);
 
-    void pop(uint8_t *outBuffer, int num);
+    DataCallbackResult pop(uint8_t *outBuffer, int num);
 
     static void push(AVPacket *packet);
 };

@@ -8,6 +8,8 @@
 
 #include "CallBack.h"
 
+#define LOG_TAG "playerStatus"
+
 class PlayerStatus {
 public:
     PlayerStatus(CallBack *);
@@ -43,6 +45,7 @@ public:
     void setStop(bool stop);
 
     void checkPrepare();
+
     void checkFinish();
 
 private:
@@ -54,13 +57,10 @@ private:
 
     bool audioPrepare;
     bool videoPrepare;
-
+    bool isPrepare;
     bool stop;
     CallBack *callBack;
 
-    bool isPrepare();
-
-    bool isFinish();
 
 };
 

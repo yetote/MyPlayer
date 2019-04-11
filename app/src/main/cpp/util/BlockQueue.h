@@ -18,17 +18,12 @@ extern "C" {
 
 class BlockQueue {
 public:
-    static enum Type {
-        AUDIO_QUEUE,
-        VIDEO_QUEUE
-    };
-
 
     void push(AVPacket *packet);
 
-    void init(PlayerStatus *playerStatus, BlockQueue::Type type);
+    void init();
 
-    bool pop(AVPacket *packet1);
+    bool pop(AVPacket *packet1, bool isFinish);
 
 
 private:
@@ -36,9 +31,6 @@ private:
     std::queue<AVPacket *> queue;
     std::condition_variable cond;
     std::mutex mutex;
-
-
-    static bool getStatus();
 
     void stop();
 };

@@ -86,7 +86,7 @@ void VideoPlayer::play(int w, int h) {
     int rst;
     bool isFinish;
     do {
-        isFinish = videoQueue.pop(packet);
+        isFinish = videoQueue.pop(packet,playerStatus->isVideoDecodeFinish());
         rst = avcodec_send_packet(pVideoCodecCtx, packet);
         while (rst >= 0) {
             rst = avcodec_receive_frame(pVideoCodecCtx, pFrame);
@@ -157,7 +157,7 @@ VideoPlayer::VideoPlayer(PlayerStatus *playerStatus, const char *vertexCode, con
     this->fragCode = fragCode;
     this->window = window;
     this->playerStatus = playerStatus;
-    videoQueue.init(playerStatus, videoQueue.VIDEO_QUEUE);
+    videoQueue.init();
 
 }
 

@@ -4,6 +4,7 @@
 
 #include "PlayerStatus.h"
 #include "CallBack.h"
+#include "Log.h"
 
 
 PlayerStatus::~PlayerStatus() {
@@ -11,22 +12,20 @@ PlayerStatus::~PlayerStatus() {
 }
 
 PlayerStatus::PlayerStatus(CallBack *callBack) {
-    bool videoDecodeFinish = false;
-    bool audioDecodeFinish = false;
+    videoDecodeFinish = false;
+    audioDecodeFinish = false;
 
-    bool videoPlayFinish = false;
-    bool audioPlayFinish = false;
+    videoPlayFinish = false;
+    audioPlayFinish = false;
 
-    bool audioPrepare = false;
-    bool videoPrepare = false;
+    audioPrepare = false;
+    videoPrepare = false;
 
-    bool stop = false;
+    stop = false;
+
     this->callBack = callBack;
 }
 
-bool PlayerStatus::isFinish() {
-    return false;
-}
 
 bool PlayerStatus::isVideoDecodeFinish() const {
     return videoDecodeFinish;
@@ -65,7 +64,9 @@ bool PlayerStatus::isAudioPrepare() const {
 }
 
 void PlayerStatus::setAudioPrepare(bool audioPrepare) {
+    LOGE(LOG_TAG, "videoPrepare%d", videoPrepare);
     PlayerStatus::audioPrepare = audioPrepare;
+
 }
 
 bool PlayerStatus::isVideoPrepare() const {
@@ -73,6 +74,7 @@ bool PlayerStatus::isVideoPrepare() const {
 }
 
 void PlayerStatus::setVideoPrepare(bool videoPrepare) {
+    LOGE(LOG_TAG, "audioPrepare%d", audioPrepare);
     PlayerStatus::videoPrepare = videoPrepare;
 }
 
@@ -85,6 +87,7 @@ void PlayerStatus::setStop(bool stop) {
 }
 
 void PlayerStatus::checkPrepare() {
+    LOGE(LOG_TAG, "audioPrepare:%d,videoPrepare%d", audioPrepare, videoPrepare);
     if (audioPrepare && videoPrepare) {
         callBack->onPrepare(callBack->CHILD_THREAD, true, 0);
     }

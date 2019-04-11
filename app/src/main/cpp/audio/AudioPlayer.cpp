@@ -129,7 +129,7 @@ AudioPlayer::onAudioReady(oboe::AudioStream *audioStream, void *audioData, int32
         playerStatus->setAudioPlayFinish(true);
         playerStatus->checkFinish();
     }
-    return res;
+    return DataCallbackResult::Continue;
 }
 
 void AudioPlayer::setData(AVPacket *packet) {
@@ -146,9 +146,11 @@ oboe::DataCallbackResult AudioPlayer::pop(uint8_t *outBuffer, int num) {
     //todo 杂音，怀疑是oboe缓冲区或者队列的问题
     bool isFinish;
     do {
-        isFinish = audioQueue.pop(packet);
+
+        isFinish = audioQueue.pop(packet, playerStatus->isAudioDecodeFinish());
         int ret;
         ret = avcodec_send_packet(audioCodecCtx, packet);
+//        LOGE(LOG_TAG, "av%d", ret);
         LOGE(LOG_TAG, "%d", ret);
         while (ret >= 0) {
             ret = avcodec_receive_frame(audioCodecCtx, pFrame);
@@ -168,6 +170,8 @@ oboe::DataCallbackResult AudioPlayer::pop(uint8_t *outBuffer, int num) {
                                   num,
                                   (const uint8_t **) (pFrame->data),
                                   pFrame->nb_samples);
+//            av_packet_free(&packet);
+//            av_frame_free(&pFrame);
             return DataCallbackResult::Continue;
         }
 
@@ -211,5 +215,10 @@ void AudioPlayer::play() {
 }
 
 AudioPlayer::~AudioPlayer() {
-    av_packet_unref(packet);
+    av_packet_free(&packet);
+    av_frame_free(&pFrame);
+    av_free(packet);
+    av_free(pFrame);
+    packet = nullptr;
+    pFrame = nullptr;
 }

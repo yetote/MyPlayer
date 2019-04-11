@@ -34,7 +34,7 @@ public:
 
     void audioPlay();
 
-    void videoPlay();
+    void videoPlay(int w,int h);
 
     Decode( PlayerStatus *);
 
@@ -53,7 +53,7 @@ private:
 
     AVCodec *pVideoCodec = nullptr;
     VideoPlayer *videoPlayer;
-
+    AudioPlayer *audioPlayer;
 
     void decodeVideo(int videoIndex, const char *vertexCode, const char *fragCode,
                      ANativeWindow *window);

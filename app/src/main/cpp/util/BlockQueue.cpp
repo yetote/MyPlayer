@@ -4,8 +4,6 @@
 
 #include "BlockQueue.h"
 
-static BlockQueue::Type type;
-static PlayerStatus *playerStatus;
 
 void BlockQueue::push(AVPacket *packet) {
     std::unique_lock<decltype(mutex)> lock(mutex);
@@ -18,14 +16,14 @@ void BlockQueue::push(AVPacket *packet) {
     cond.notify_all();
 }
 
-bool BlockQueue::pop(AVPacket *packet1) {
+bool BlockQueue::pop(AVPacket *packet1, bool isFinish) {
     std::unique_lock<decltype(mutex)> lock(mutex);
 
-    if (getStatus && queue.empty()) {
+    if (isFinish && queue.empty()) {
         LOGE("blockQueue", "播放完成");
         cond.notify_all();
         return true;
-    } else if (!getStatus && queue.empty()) {
+    } else if (!isFinish && queue.empty()) {
         LOGE("blockQueue", "the messagequeue is empty ,waiting producer add message ");
         cond.wait(lock);
     } else {
@@ -37,27 +35,12 @@ bool BlockQueue::pop(AVPacket *packet1) {
     return false;
 }
 
-void BlockQueue::init(PlayerStatus *playerStatus, BlockQueue::Type type) {
+void BlockQueue::init() {
     packet = av_packet_alloc();
-    type = type;
-    playerStatus = playerStatus;
 }
 
 void BlockQueue::stop() {
     av_packet_free(&packet);
-}
-
-
-bool BlockQueue::getStatus() {
-    if (BlockQueue::type == AUDIO_QUEUE) {
-        return playerStatus->isAudioDecodeFinish();
-    }
-    return playerStatus->isVideoDecodeFinish();
-
-}
-
-BlockQueue::BlockQueue(PlayerStatus *playerStatus, BlockQueue::Type type) {
-
 }
 
 

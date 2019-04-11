@@ -33,9 +33,7 @@ public:
 
     void setData(AVPacket *packet);
 
-    void setState(bool isPush);
-
-    void stop();
+    bool pause();
 
     void play(int w, int h);
 
@@ -67,8 +65,6 @@ private:
     void drawFrame(AVFrame *);
 
     void bindTexture(AVFrame *frame);
-
-    void showFrame(AVFrame *pFrame);
 
 };
 

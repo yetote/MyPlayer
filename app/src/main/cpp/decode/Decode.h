@@ -27,6 +27,8 @@ class Decode {
 public:
     int audioIndex, videoIndex;
 
+    Decode(PlayerStatus *);
+
     void prepare(const char *path, const char *vertexCode, const char *fragCode,
                  ANativeWindow *window);
 
@@ -34,10 +36,9 @@ public:
 
     void audioPlay();
 
-    void videoPlay(int w,int h);
+    void videoPlay(int w, int h);
 
-    Decode( PlayerStatus *);
-
+    void pause();
     ~Decode();
 
 private:

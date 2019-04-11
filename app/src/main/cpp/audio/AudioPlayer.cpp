@@ -143,40 +143,38 @@ void AudioPlayer::push(AVPacket *packet) {
 
 
 oboe::DataCallbackResult AudioPlayer::pop(uint8_t *outBuffer, int num) {
-    //todo 杂音，怀疑是oboe缓冲区或者队列的问题
-    bool isFinish;
-    do {
+    if (!playerStatus->isPause()) {
 
-        isFinish = audioQueue.pop(packet, playerStatus->isAudioDecodeFinish());
-        int ret;
-        ret = avcodec_send_packet(audioCodecCtx, packet);
-//        LOGE(LOG_TAG, "av%d", ret);
-        LOGE(LOG_TAG, "%d", ret);
-        while (ret >= 0) {
-            ret = avcodec_receive_frame(audioCodecCtx, pFrame);
-            if (ret == AVERROR(EAGAIN)) {
-                LOGE(LOG_TAG, "读取解码数据失败");
-                continue;
-            } else if (ret == AVERROR_EOF) {
-                LOGE(LOG_TAG, "解码完成");
-                break;
-            } else if (ret < 0) {
-                LOGE(LOG_TAG, "解码出错");
-                continue;
+        //todo 杂音，怀疑是oboe缓冲区或者队列的问题
+        bool isFinish;
+        do {
+            isFinish = audioQueue.pop(packet, playerStatus->isAudioDecodeFinish());
+            int ret;
+            ret = avcodec_send_packet(audioCodecCtx, packet);
+            while (ret >= 0) {
+                ret = avcodec_receive_frame(audioCodecCtx, pFrame);
+                if (ret == AVERROR(EAGAIN)) {
+                    LOGE(LOG_TAG, "读取解码数据失败");
+                    continue;
+                } else if (ret == AVERROR_EOF) {
+                    LOGE(LOG_TAG, "解码完成");
+                    break;
+                } else if (ret < 0) {
+                    LOGE(LOG_TAG, "解码出错");
+                    continue;
+                }
+
+                int rst = swr_convert(pSwrCtx,
+                                      &outBuffer,
+                                      num,
+                                      (const uint8_t **) (pFrame->data),
+                                      pFrame->nb_samples);
+                return DataCallbackResult::Continue;
             }
-
-            int rst = swr_convert(pSwrCtx,
-                                  &outBuffer,
-                                  num,
-                                  (const uint8_t **) (pFrame->data),
-                                  pFrame->nb_samples);
-//            av_packet_free(&packet);
-//            av_frame_free(&pFrame);
-            return DataCallbackResult::Continue;
-        }
-
-    } while (!isFinish);
-    return DataCallbackResult::Stop;
+        } while (!isFinish);
+    } else{
+        return DataCallbackResult::Stop;
+    }
 }
 
 
@@ -221,4 +219,8 @@ AudioPlayer::~AudioPlayer() {
     av_free(pFrame);
     packet = nullptr;
     pFrame = nullptr;
+}
+
+bool AudioPlayer::pause() {
+
 }

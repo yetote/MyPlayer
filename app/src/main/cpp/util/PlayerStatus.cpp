@@ -22,7 +22,7 @@ PlayerStatus::PlayerStatus(CallBack *callBack) {
     videoPrepare = false;
 
     stop = false;
-
+    pause = false;
     this->callBack = callBack;
 }
 
@@ -98,5 +98,18 @@ void PlayerStatus::checkFinish() {
         callBack->onFinish(callBack->CHILD_THREAD);
     }
 }
+
+void PlayerStatus::checkPause() {
+    callBack->onPause(callBack->CHILD_THREAD);
+}
+
+bool PlayerStatus::isPause() const {
+    return pause;
+}
+
+void PlayerStatus::setPause(bool pause) {
+    PlayerStatus::pause = pause;
+}
+
 
 

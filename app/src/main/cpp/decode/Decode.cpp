@@ -155,8 +155,6 @@ Decode::Decode(PlayerStatus *playerStatus) {
 void Decode::play(int w, int h) {
     std::thread audioPlayThread(&Decode::audioPlay, this);
     audioPlayThread.detach();
-//    videoPlayer->play(w, h);
-//    audioPlayer->play();
     std::thread videoPlayThread(&Decode::videoPlay, this, w, h);
     videoPlayThread.detach();
 }
@@ -171,6 +169,16 @@ void Decode::decode() {
 
 void Decode::videoPlay(int w, int h) {
     videoPlayer->play(w, h);
+}
+
+
+void Decode::pause() {
+    playerStatus->setPause(true);
+//    bool isAudioPause = audioPlayer->pause();
+//    bool isVideoPause = videoPlayer->pause();
+//    if (isAudioPause && isVideoPause) {
+//        playerStatus->checkPause();
+//    }
 }
 
 Decode::~Decode() {

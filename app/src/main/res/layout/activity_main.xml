@@ -18,7 +18,7 @@
         android:id="@+id/start"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:src="@mipmap/play"
+        android:src="@mipmap/pause"
         app:layout_constraintBottom_toBottomOf="@+id/surfaceView"
         app:layout_constraintStart_toStartOf="parent" />
 

@@ -44,9 +44,15 @@ public:
 
     void setStop(bool stop);
 
+    bool isPause() const;
+
     void checkPrepare();
 
     void checkFinish();
+
+    void checkPause();
+
+    void setPause(bool pause);
 
 private:
     bool videoDecodeFinish;
@@ -58,7 +64,10 @@ private:
     bool audioPrepare;
     bool videoPrepare;
     bool isPrepare;
+
     bool stop;
+
+    bool pause;
     CallBack *callBack;
 
 

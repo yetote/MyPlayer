@@ -84,66 +84,68 @@ void VideoPlayer::play(int w, int h) {
     AVPacket *packet = av_packet_alloc();
     AVFrame *pFrame = av_frame_alloc();
     int rst;
-    bool isFinish;
+    bool isFinish = false;
     do {
-        isFinish = videoQueue.pop(packet,playerStatus->isVideoDecodeFinish());
-        rst = avcodec_send_packet(pVideoCodecCtx, packet);
-        while (rst >= 0) {
-            rst = avcodec_receive_frame(pVideoCodecCtx, pFrame);
-            if (rst == AVERROR(EAGAIN)) {
-                av_usleep(1000);
-                LOGE(LOG_TAG, "%s", "读取解码数据失败");
-                continue;
-            } else if (rst == AVERROR_EOF) {
-                av_usleep(1000);
-                LOGE(LOG_TAG, "%s", "EOF解码完成");
-                break;
-            } else if (rst < 0) {
-                av_usleep(1000);
-                LOGE(LOG_TAG, "%s", "解码出错");
-                continue;
-            }
+        if (!playerStatus->isPause()) {
+            isFinish = videoQueue.pop(packet, playerStatus->isVideoDecodeFinish());
+            rst = avcodec_send_packet(pVideoCodecCtx, packet);
+            while (rst >= 0) {
+                rst = avcodec_receive_frame(pVideoCodecCtx, pFrame);
+                if (rst == AVERROR(EAGAIN)) {
+                    av_usleep(1000);
+                    LOGE(LOG_TAG, "%s", "读取解码数据失败");
+                    continue;
+                } else if (rst == AVERROR_EOF) {
+                    av_usleep(1000);
+                    LOGE(LOG_TAG, "%s", "EOF解码完成");
+                    break;
+                } else if (rst < 0) {
+                    av_usleep(1000);
+                    LOGE(LOG_TAG, "%s", "解码出错");
+                    continue;
+                }
 
-            if (pFrame->format == AV_PIX_FMT_YUV420P) {
-                LOGE(LOG_TAG, "获取frame成功,解码后的格式是YUV420P");
-                drawFrame(pFrame);
-            } else {
-                LOGE(LOG_TAG, "获取frame成功,格式为%d", pFrame->format);
-                AVFrame *pFrame420P = av_frame_alloc();
-                int num = av_image_get_buffer_size(AV_PIX_FMT_YUV420P,
-                                                   pVideoCodecCtx->width,
-                                                   pVideoCodecCtx->height, 1);
-                uint8_t *buffer = static_cast<uint8_t *>(av_malloc(num * sizeof(uint8_t)));
-                av_image_fill_arrays(pFrame420P->data,
-                                     pFrame420P->linesize,
-                                     buffer,
-                                     AV_PIX_FMT_YUV420P,
-                                     pVideoCodecCtx->width,
-                                     pVideoCodecCtx->height,
-                                     1);
-                SwsContext *swsContext = sws_getContext(pVideoCodecCtx->width,
-                                                        pVideoCodecCtx->height,
-                                                        pVideoCodecCtx->pix_fmt,
-                                                        pVideoCodecCtx->width,
-                                                        pVideoCodecCtx->height,
-                                                        AV_PIX_FMT_YUV420P,
-                                                        SWS_BICUBIC, null, null, null
-                );
-                sws_scale(swsContext,
-                          pFrame->data,
-                          pFrame->linesize,
-                          0,
-                          pFrame->height,
-                          pFrame420P->data,
-                          pFrame420P->linesize);
-                drawFrame(pFrame420P);
-                av_frame_free(&pFrame420P);
-                av_free(pFrame420P);
-                av_free(buffer);
-                pFrame420P = nullptr;
-                sws_freeContext(swsContext);
+                if (pFrame->format == AV_PIX_FMT_YUV420P) {
+                    LOGE(LOG_TAG, "获取frame成功,解码后的格式是YUV420P");
+                    drawFrame(pFrame);
+                } else {
+                    LOGE(LOG_TAG, "获取frame成功,格式为%d", pFrame->format);
+                    AVFrame *pFrame420P = av_frame_alloc();
+                    int num = av_image_get_buffer_size(AV_PIX_FMT_YUV420P,
+                                                       pVideoCodecCtx->width,
+                                                       pVideoCodecCtx->height, 1);
+                    uint8_t *buffer = static_cast<uint8_t *>(av_malloc(num * sizeof(uint8_t)));
+                    av_image_fill_arrays(pFrame420P->data,
+                                         pFrame420P->linesize,
+                                         buffer,
+                                         AV_PIX_FMT_YUV420P,
+                                         pVideoCodecCtx->width,
+                                         pVideoCodecCtx->height,
+                                         1);
+                    SwsContext *swsContext = sws_getContext(pVideoCodecCtx->width,
+                                                            pVideoCodecCtx->height,
+                                                            pVideoCodecCtx->pix_fmt,
+                                                            pVideoCodecCtx->width,
+                                                            pVideoCodecCtx->height,
+                                                            AV_PIX_FMT_YUV420P,
+                                                            SWS_BICUBIC, null, null, null
+                    );
+                    sws_scale(swsContext,
+                              pFrame->data,
+                              pFrame->linesize,
+                              0,
+                              pFrame->height,
+                              pFrame420P->data,
+                              pFrame420P->linesize);
+                    drawFrame(pFrame420P);
+                    av_frame_free(&pFrame420P);
+                    av_free(pFrame420P);
+                    av_free(buffer);
+                    pFrame420P = nullptr;
+                    sws_freeContext(swsContext);
+                }
+                av_usleep(1000);
             }
-            av_usleep(1000);
         }
     } while (!isFinish);
     playerStatus->setVideoPlayFinish(true);
@@ -185,9 +187,6 @@ void VideoPlayer::getLocation() {
     };
 }
 
-void VideoPlayer::stop() {
-
-}
 
 void VideoPlayer::bindTexture(AVFrame *frame) {
     for (int i = 0; i < 3; ++i) {
@@ -204,8 +203,9 @@ void VideoPlayer::bindTexture(AVFrame *frame) {
     }
 }
 
-void VideoPlayer::showFrame(AVFrame *pFrame) {
-    LOGE(LOG_TAG, "width=%d", pFrame->width);
+
+bool VideoPlayer::pause() {
+
 }
 
 

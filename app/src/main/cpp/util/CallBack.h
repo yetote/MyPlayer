@@ -23,9 +23,7 @@ public:
     void onPrepare(THREAD_TYPE threadType, bool isSuccess, int errorCode);
 
     void onFinish(THREAD_TYPE threadType);
-
-    bool isDecode;
-    bool isFinish;
+    void onPause(THREAD_TYPE threadType);
 
 private:
     JavaVM *jvm;
@@ -35,6 +33,7 @@ private:
 
     jmethodID preparedId;
     jmethodID finishId;
+    jmethodID pauseId;
 };
 
 

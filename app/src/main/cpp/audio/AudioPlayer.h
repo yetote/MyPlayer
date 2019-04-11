@@ -41,6 +41,8 @@ public:
 
     void play();
 
+    bool pause();
+
 
     void initOboe();
 
@@ -52,6 +54,7 @@ private:
     SwrContext *pSwrCtx;
     AudioStream *stream;
     PlayerStatus *playerStatus;
+
 
     DataCallbackResult
     onAudioReady(oboe::AudioStream *audioStream, void *audioData, int32_t numFrames);

@@ -39,6 +39,8 @@ public:
     void videoPlay(int w, int h);
 
     void pause();
+
+    void recover();
     ~Decode();
 
 private:

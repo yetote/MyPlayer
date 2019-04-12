@@ -89,5 +89,5 @@ public class MyPlayer {
     /**
      * 暂停后继续播放
      */
-//    public native void recover();
+    public native void recover();
 }

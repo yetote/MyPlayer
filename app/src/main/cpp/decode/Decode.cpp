@@ -184,3 +184,7 @@ void Decode::pause() {
 Decode::~Decode() {
 
 }
+
+void Decode::recover() {
+    playerStatus->setPause(false);
+}

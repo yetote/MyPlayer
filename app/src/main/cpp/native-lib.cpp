@@ -50,4 +50,10 @@ JNIEXPORT void JNICALL
 Java_com_example_myplayer_player_MyPlayer_pause(JNIEnv *env, jobject instance) {
     decode->pause();
 
+}extern "C"
+JNIEXPORT void JNICALL
+Java_com_example_myplayer_player_MyPlayer_recover(JNIEnv *env, jobject instance) {
+
+    decode->recover();
+
 }

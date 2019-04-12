@@ -102,8 +102,9 @@ public class MainActivity extends AppCompatActivity {
                 player.pause();
             } else {
                 start.setImageDrawable(getResources().getDrawable(R.mipmap.pause, null));
-//                player.recover();
+                player.recover();
             }
+            isPlaying=!isPlaying;
         });
     }
 

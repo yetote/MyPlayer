@@ -25,7 +25,6 @@ extern "C" {
 
 class Decode {
 public:
-    int audioIndex, videoIndex;
 
     Decode(PlayerStatus *);
 
@@ -41,10 +40,13 @@ public:
     void pause();
 
     void recover();
+
+    void seek(int secs);
     ~Decode();
 
 private:
     PlayerStatus *playerStatus;
+    int audioIndex, videoIndex;
     AVFormatContext *pFmtCtx = nullptr;
 
     AVStream *pAudioStream = nullptr;

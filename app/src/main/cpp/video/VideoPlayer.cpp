@@ -208,4 +208,8 @@ bool VideoPlayer::pause() {
 
 }
 
+void VideoPlayer::clear() {
+    videoQueue.clear();
+}
+
 

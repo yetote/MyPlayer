@@ -46,6 +46,8 @@ public:
 
     void initOboe();
 
+    void clear();
+
 private:
     Result result;
     bool isPlaying;
@@ -54,16 +56,26 @@ private:
     SwrContext *pSwrCtx;
     AudioStream *stream;
     PlayerStatus *playerStatus;
-
+    LatencyTuner *latencyTuner;
 
     DataCallbackResult
     onAudioReady(oboe::AudioStream *audioStream, void *audioData, int32_t numFrames);
 
     void setBuilderParams(AudioStreamBuilder *pBuilder);
 
-    DataCallbackResult pop(uint8_t *outBuffer, int num);
+    int pop();
 
     static void push(AVPacket *packet);
+
+    uint8_t *dataArray;
+    uint8_t *outBuffer;
+    int outChannelNum;
+    int currentTime, lastTime;
+    int32_t remainSize;
+
+    void checkSize(int32_t frames);
+
+    AVRational timeBase;
 };
 
 

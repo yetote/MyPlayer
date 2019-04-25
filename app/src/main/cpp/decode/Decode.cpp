@@ -39,14 +39,12 @@ void Decode::prepare(const char *path, const char *vertexCode, const char *fragC
     if (audioIndex != -1) {
         std::thread decodeAudioThread(&Decode::decodeAudio, this, audioIndex);
         decodeAudioThread.detach();
-//        return;
     } else {
         LOGE("decode", "未找到音频流");
         playerStatus->setAudioPrepare(true);
         playerStatus->setAudioDecodeFinish(true);
     }
     if (videoIndex != -1) {
-//        return;
         std::thread decodeVideoThread(&Decode::decodeVideo, this, videoIndex, vertexCode, fragCode,
                                       window);
         decodeVideoThread.detach();
@@ -55,11 +53,6 @@ void Decode::prepare(const char *path, const char *vertexCode, const char *fragC
         playerStatus->setVideoPrepare(true);
         playerStatus->setVideoDecodeFinish(true);
     }
-//    std::thread decodeAudioThread(&Decode::decodeAudio, this, audioIndex);
-//    decodeAudioThread.detach();
-//    std::thread decodeVideoThread(&Decode::decodeVideo, this, videoIndex, vertexCode, fragCode,
-//                                  window);
-//    decodeVideoThread.detach();
 }
 
 void Decode::decodeVideo(int videoIndex, const char *vertexCode, const char *fragCode,
@@ -92,12 +85,18 @@ void Decode::decodeVideo(int videoIndex, const char *vertexCode, const char *fra
     int i = 0;
     playerStatus->setVideoPrepare(true);
     playerStatus->checkPrepare();
-    while (av_read_frame(pFmtCtx, packet) >= 0) {
-        if (packet->stream_index == videoIndex) {
-            videoPlayer->setData(packet);
-            i++;
-            LOGE("decode", "解码了%d帧", i);
-            av_usleep(30000);
+    while (true) {
+        if (!playerStatus->isPause()) {
+            if (av_read_frame(pFmtCtx, packet) >= 0) {
+                if (packet->stream_index == videoIndex) {
+                    videoPlayer->setData(packet);
+                    i++;
+                    LOGE("decode", "解码了%d帧", i);
+                    av_usleep(30000);
+                }
+            } else {
+                break;
+            }
         }
     }
     playerStatus->setVideoDecodeFinish(true);
@@ -136,11 +135,15 @@ void Decode::decodeAudio(int audioIndex) {
     audioPlayer->initOboe();
     playerStatus->setAudioPrepare(true);
     playerStatus->checkPrepare();
-    while (av_read_frame(pFmtCtx, packet) >= 0) {
-        if (packet->stream_index == audioIndex) {
-            audioPlayer->setData(packet);
-//            av_usleep(30000);
+    while (!playerStatus->isPause()) {
+        if (av_read_frame(pFmtCtx, packet) >= 0) {
+            if (packet->stream_index == audioIndex) {
+                audioPlayer->setData(packet);
+            } else {
+                LOGE(LOG_TAG, "不是音频流");
+            }
         }
+//        break;
     }
     playerStatus->setAudioDecodeFinish(true);
     av_packet_free(&packet);
@@ -153,10 +156,14 @@ Decode::Decode(PlayerStatus *playerStatus) {
 }
 
 void Decode::play(int w, int h) {
-    std::thread audioPlayThread(&Decode::audioPlay, this);
-    audioPlayThread.detach();
-    std::thread videoPlayThread(&Decode::videoPlay, this, w, h);
-    videoPlayThread.detach();
+    if (audioIndex != -1) {
+        std::thread audioPlayThread(&Decode::audioPlay, this);
+        audioPlayThread.detach();
+    }
+    if (videoIndex != -1) {
+        std::thread videoPlayThread(&Decode::videoPlay, this, w, h);
+        videoPlayThread.detach();
+    }
 }
 
 void Decode::audioPlay() {
@@ -173,12 +180,8 @@ void Decode::videoPlay(int w, int h) {
 
 
 void Decode::pause() {
-    playerStatus->setPause(true);
-//    bool isAudioPause = audioPlayer->pause();
-//    bool isVideoPause = videoPlayer->pause();
-//    if (isAudioPause && isVideoPause) {
-//        playerStatus->checkPause();
-//    }
+//    playerStatus->setPause(true);
+    audioPlayer->pause();
 }
 
 Decode::~Decode() {
@@ -186,5 +189,21 @@ Decode::~Decode() {
 }
 
 void Decode::recover() {
+    playerStatus->setPause(false);
+}
+
+void Decode::seek(int secs) {
+    playerStatus->setPause(true);
+    int64_t rel = secs * AV_TIME_BASE;
+    avformat_seek_file(pFmtCtx, -1, INT64_MIN, rel, INT64_MAX, 0);
+    if (audioPlayer != nullptr) {
+        audioPlayer->clear();
+        avcodec_flush_buffers(audioPlayer->audioCodecCtx);
+    }
+
+    if (videoPlayer != nullptr) {
+        videoPlayer->clear();
+        avcodec_flush_buffers(videoPlayer->pVideoCodecCtx);
+    }
     playerStatus->setPause(false);
 }

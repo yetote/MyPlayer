@@ -25,6 +25,7 @@ public:
 
     bool pop(AVPacket *packet1, bool isFinish);
 
+    void clear();
 
 private:
     AVPacket *packet;

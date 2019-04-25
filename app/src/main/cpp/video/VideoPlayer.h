@@ -36,7 +36,7 @@ public:
     bool pause();
 
     void play(int w, int h);
-
+    void clear();
 private:
     PlayerStatus *playerStatus;
 

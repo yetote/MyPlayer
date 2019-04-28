@@ -7,12 +7,14 @@
 
 void BlockQueue::push(AVPacket *packet) {
     std::unique_lock<decltype(mutex)> lock(mutex);
-    while (queue.size() >= 10) {
+    while (queue.size() >= maxSize) {
         LOGE("blockQueue", "队列已满，阻塞中：%d", queue.size());
         cond.wait(lock);
     }
     queue.push(packet);
     LOGE("blockQueue", "packet入队，队列容量:%d", queue.size());
+    LOGE("blockQueue", "packet入队，地址为:%p", packet);
+
     cond.notify_all();
 }
 
@@ -30,9 +32,10 @@ bool BlockQueue::pop(AVPacket *packet1, bool isFinish) {
         int rst = av_packet_ref(packet1, queue.front());
         if (rst == 0) {
             LOGE("blockQueue", "packet出队，队列剩余:%d", queue.size());
+            LOGE("blockQueue", "packet出队，地址为:%p,\npacket1=%p", queue.front(), packet1);
             queue.pop();
-        } else{
-            LOGE(BlockQueue_TAG,"line in 35:复制packet失败%d",rst);
+        } else {
+            LOGE(BlockQueue_TAG, "line in 35:复制packet失败%d", rst);
         }
     }
     cond.notify_all();
@@ -40,7 +43,7 @@ bool BlockQueue::pop(AVPacket *packet1, bool isFinish) {
 }
 
 void BlockQueue::init() {
-    packet = av_packet_alloc();
+//    packet = av_packet_alloc();
 }
 
 void BlockQueue::stop() {
@@ -57,6 +60,16 @@ void BlockQueue::clear() {
         }
     }
     cond.notify_all();
+}
+
+void BlockQueue::setMaxSize(int size) {
+    maxSize = size;
+}
+
+BlockQueue::BlockQueue(int maxSize) : maxSize(maxSize) {}
+
+BlockQueue::~BlockQueue() {
+
 }
 
 

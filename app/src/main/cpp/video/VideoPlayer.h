@@ -18,6 +18,7 @@ extern "C" {
 #include "../ffmpeg/includes/libavutil/time.h"
 };
 #define VideoPlayer_TAG "VideoPlayer"
+
 class VideoPlayer {
 public:
     VideoPlayer(PlayerStatus *, const char *vertexCode, const char *fragCode,
@@ -25,18 +26,20 @@ public:
 
     ~VideoPlayer();
 
+    BlockQueue *videoQueue;
     AVCodecContext *pVideoCodecCtx;
     bool isFinish;
     static bool isPushFinish;
 
     void init();
 
-    void setData(AVPacket *packet);
 
     bool pause();
 
     void play(int w, int h);
+
     void clear();
+
 private:
     PlayerStatus *playerStatus;
 
@@ -58,7 +61,6 @@ private:
     const char *fragCode;
     ANativeWindow *window;
 
-    static void push(AVPacket *packet);
 
     void getLocation();
 

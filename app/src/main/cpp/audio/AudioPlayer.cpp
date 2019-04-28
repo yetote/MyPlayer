@@ -8,7 +8,7 @@
 
 #define null NULL
 
-BlockQueue audioQueue;
+
 static const char *audioFormatStr[] = {
         "Invalid   非法格式", // = -1,
         "Unspecified  自动格式", // = 0,
@@ -44,20 +44,20 @@ const char *audioApiToString(AudioApi api) {
 }
 
 void printAudioStreamInfo(AudioStream *stream) {
-    LOGE(LOG_TAG, "StreamID: %p", stream);
+    LOGE(AudioPlayer_TAG, "StreamID: %p", stream);
 
-    LOGE(LOG_TAG, "缓冲区容量: %d", stream->getBufferCapacityInFrames());
-    LOGE(LOG_TAG, "缓冲区大小: %d", stream->getBufferSizeInFrames());
-    LOGE(LOG_TAG, "一次读写的帧数: %d", stream->getFramesPerBurst());
+    LOGE(AudioPlayer_TAG, "缓冲区容量: %d", stream->getBufferCapacityInFrames());
+    LOGE(AudioPlayer_TAG, "缓冲区大小: %d", stream->getBufferSizeInFrames());
+    LOGE(AudioPlayer_TAG, "一次读写的帧数: %d", stream->getFramesPerBurst());
     //欠载和过载在官方文档的描述里，大致是欠载-消费者消费的速度大于生产的速度，过载就是生产的速度大于消费的速度
-    LOGE(LOG_TAG, "欠载或过载的数量: %d", stream->getXRunCount());
-    LOGE(LOG_TAG, "采样率: %d", stream->getSampleRate());
-    LOGE(LOG_TAG, "声道布局: %d", stream->getChannelCount());
-    LOGE(LOG_TAG, "音频设备id: %d", stream->getDeviceId());
-    LOGE(LOG_TAG, "音频格式: %s", FormatToString(stream->getFormat()));
-    LOGE(LOG_TAG, "流的共享模式: %s", stream->getSharingMode() == SharingMode::Exclusive ?
-                                "独占" : "共享");
-    LOGE(LOG_TAG, "使用的音频的API：%s", audioApiToString(stream->getAudioApi()));
+    LOGE(AudioPlayer_TAG, "欠载或过载的数量: %d", stream->getXRunCount());
+    LOGE(AudioPlayer_TAG, "采样率: %d", stream->getSampleRate());
+    LOGE(AudioPlayer_TAG, "声道布局: %d", stream->getChannelCount());
+    LOGE(AudioPlayer_TAG, "音频设备id: %d", stream->getDeviceId());
+    LOGE(AudioPlayer_TAG, "音频格式: %s", FormatToString(stream->getFormat()));
+    LOGE(AudioPlayer_TAG, "流的共享模式: %s", stream->getSharingMode() == SharingMode::Exclusive ?
+                                        "独占" : "共享");
+    LOGE(AudioPlayer_TAG, "使用的音频的API：%s", audioApiToString(stream->getAudioApi()));
     PerformanceMode perfMode = stream->getPerformanceMode();
     std::string perfModeDescription;
     switch (perfMode) {
@@ -71,17 +71,17 @@ void printAudioStreamInfo(AudioStream *stream) {
             perfModeDescription = "节能";
             break;
     }
-    LOGE(LOG_TAG, "性能模式: %s", perfModeDescription.c_str());
+    LOGE(AudioPlayer_TAG, "性能模式: %s", perfModeDescription.c_str());
 
 
     Direction dir = stream->getDirection();
-    LOGE(LOG_TAG, "流方向: %s", (dir == Direction::Output ? "OUTPUT" : "INPUT"));
+    LOGE(AudioPlayer_TAG, "流方向: %s", (dir == Direction::Output ? "OUTPUT" : "INPUT"));
     if (dir == Direction::Output) {
-        LOGE(LOG_TAG, "输出流读取的帧数: %d", (int32_t) stream->getFramesRead());
-        LOGE(LOG_TAG, "输出流写入的帧数: %d", (int32_t) stream->getFramesWritten());
+        LOGE(AudioPlayer_TAG, "输出流读取的帧数: %d", (int32_t) stream->getFramesRead());
+        LOGE(AudioPlayer_TAG, "输出流写入的帧数: %d", (int32_t) stream->getFramesWritten());
     } else {
-        LOGE(LOG_TAG, "输入流读取的帧数: %d", (int32_t) stream->getFramesRead());
-        LOGE(LOG_TAG, "输入流写入的帧数: %d", (int32_t) stream->getFramesWritten());
+        LOGE(AudioPlayer_TAG, "输入流读取的帧数: %d", (int32_t) stream->getFramesRead());
+        LOGE(AudioPlayer_TAG, "输入流写入的帧数: %d", (int32_t) stream->getFramesWritten());
     }
 }
 
@@ -91,11 +91,11 @@ void AudioPlayer::initOboe() {
 
     result = builder.openStream(&stream);
     if (result != Result::OK) {
-        LOGE(LOG_TAG, "打开流失败，error：%s", convertToText(result));
+        LOGE(AudioPlayer_TAG, "打开流失败，error：%s", convertToText(result));
         return;
     }
     if (stream == nullptr) {
-        LOGE(LOG_TAG, "创建流失败");
+        LOGE(AudioPlayer_TAG, "创建流失败");
         return;
     }
     printAudioStreamInfo(stream);
@@ -106,6 +106,7 @@ AudioPlayer::AudioPlayer(PlayerStatus *playerStatus) {
     this->playerStatus = playerStatus;
     dataArray = new uint8_t[44100 * 2 * 4];
     outBuffer = static_cast<uint8_t *>(av_malloc(MAX_AUDIO_FRAME_SIZE));
+    audioQueue = new BlockQueue(100);
 }
 
 void AudioPlayer::setBuilderParams(AudioStreamBuilder *builder) {
@@ -146,33 +147,25 @@ AudioPlayer::onAudioReady(oboe::AudioStream *audioStream, void *audioData, int32
     return DataCallbackResult::Continue;
 }
 
-void AudioPlayer::setData(AVPacket *packet) {
-    std::thread audio(push, packet);
-    audio.join();
-}
-
-void AudioPlayer::push(AVPacket *packet) {
-    audioQueue.push(packet);
-}
 
 
 int AudioPlayer::pop() {
     memset(outBuffer, 0, MAX_AUDIO_FRAME_SIZE);
     bool isFinish;
     do {
-        isFinish = audioQueue.pop(packet, playerStatus->isAudioDecodeFinish());
+        isFinish = audioQueue->pop(packet, playerStatus->isAudioDecodeFinish());
         int ret;
         ret = avcodec_send_packet(audioCodecCtx, packet);
         if (ret == 0) {
             ret = avcodec_receive_frame(audioCodecCtx, pFrame);
             if (ret == AVERROR(EAGAIN)) {
-                LOGE(LOG_TAG, "读取解码数据失败%d", ret);
+                LOGE(AudioPlayer_TAG, "读取解码数据失败%d", ret);
                 continue;
             } else if (ret == AVERROR_EOF) {
-                LOGE(LOG_TAG, "解码完成");
+                LOGE(AudioPlayer_TAG, "解码完成");
                 break;
             } else if (ret < 0) {
-                LOGE(LOG_TAG, "解码出错");
+                LOGE(AudioPlayer_TAG, "解码出错");
                 continue;
             }
 
@@ -184,9 +177,10 @@ int AudioPlayer::pop() {
             int outBufferSize = av_samples_get_buffer_size(nullptr, outChannelNum,
                                                            frameCount,
                                                            AV_SAMPLE_FMT_S16, 1);
-            LOGE(LOG_TAG, "line in 187:时间为%f", pFrame->pts * av_q2d(timeBase));
+            LOGE(AudioPlayer_TAG, "line in 187:时间为%f", pFrame->pts * av_q2d(timeBase));
             currentTime = pFrame->pts * av_q2d(timeBase);
             memcpy(dataArray + remainSize, outBuffer, size_t(outBufferSize));
+            LOGE(AudioPlayer_TAG, "line in 191:outbufferSize=%d", outBufferSize);
             return outBufferSize;
         }
     } while (!isFinish);
@@ -194,7 +188,7 @@ int AudioPlayer::pop() {
 
 
 void AudioPlayer::play() {
-    LOGE(LOG_TAG, "play");
+    LOGE(AudioPlayer_TAG, "play");
     packet = av_packet_alloc();
     pFrame = av_frame_alloc();
     pSwrCtx = swr_alloc();
@@ -222,7 +216,7 @@ void AudioPlayer::play() {
     isPlaying = true;
     result = stream->requestStart();
     if (result != Result::OK) {
-        LOGE(LOG_TAG, "请求打开流失败%s", convertToText(result));
+        LOGE(AudioPlayer_TAG, "请求打开流失败%s", convertToText(result));
         return;
     }
     latencyTuner = new LatencyTuner(*stream);
@@ -242,7 +236,7 @@ bool AudioPlayer::pause() {
 }
 
 void AudioPlayer::clear() {
-    audioQueue.clear();
+    audioQueue->clear();
 }
 
 void AudioPlayer::checkSize(int32_t numFrames) {

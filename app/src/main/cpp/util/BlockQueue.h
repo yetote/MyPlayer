@@ -10,6 +10,7 @@
 
 #include <queue>
 #include <mutex>
+
 #define BlockQueue_TAG "BlockQueue"
 extern "C" {
 #include <libavcodec/avcodec.h>
@@ -27,11 +28,18 @@ public:
 
     void clear();
 
+    void setMaxSize(int size);
+
+    BlockQueue(int maxSize);
+
+    virtual ~BlockQueue();
+
 private:
     AVPacket *packet;
     std::queue<AVPacket *> queue;
     std::condition_variable cond;
     std::mutex mutex;
+    int maxSize = 0;
 
     void stop();
 };

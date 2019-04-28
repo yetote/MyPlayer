@@ -21,7 +21,7 @@ extern "C" {
 #include "../ffmpeg/includes/libavutil/imgutils.h"
 #include "../ffmpeg/includes/libswscale/swscale.h"
 };
-
+#define Decode_TAG "Decode"
 
 class Decode {
 public:
@@ -42,6 +42,7 @@ public:
     void recover();
 
     void seek(int secs);
+
     ~Decode();
 
 private:
@@ -60,12 +61,12 @@ private:
     VideoPlayer *videoPlayer;
     AudioPlayer *audioPlayer;
 
-    void decodeVideo(int videoIndex, const char *vertexCode, const char *fragCode,
-                     ANativeWindow *window);
 
-    void decodeAudio(int audioIndex);
+    void startDecode();
 
-    void decode();
+    void findCodec(AVCodecContext **, AVCodec *, AVStream *);
+
+
 };
 
 

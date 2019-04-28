@@ -21,7 +21,7 @@ extern "C" {
 };
 
 
-#define LOG_TAG "AudioPlayer"
+#define AudioPlayer_TAG "AudioPlayer"
 #define MAX_AUDIO_FRAME_SIZE 44100*4
 using namespace oboe;
 
@@ -36,8 +36,7 @@ public:
 
     ~AudioPlayer();
 
-
-    void setData(AVPacket *packet);
+    BlockQueue* audioQueue;
 
     void play();
 
@@ -64,8 +63,6 @@ private:
     void setBuilderParams(AudioStreamBuilder *pBuilder);
 
     int pop();
-
-    static void push(AVPacket *packet);
 
     uint8_t *dataArray;
     uint8_t *outBuffer;

@@ -8,7 +8,7 @@
 
 #define null NULL
 
-static BlockQueue audioQueue;
+BlockQueue audioQueue;
 static const char *audioFormatStr[] = {
         "Invalid   非法格式", // = -1,
         "Unspecified  自动格式", // = 0,

@@ -37,8 +37,10 @@ void Decode::prepare(const char *path, const char *vertexCode, const char *fragC
         }
     }
     if (audioIndex != -1) {
-        std::thread decodeAudioThread(&Decode::decodeAudio, this, audioIndex);
-        decodeAudioThread.detach();
+//        std::thread decodeAudioThread(&Decode::decodeAudio, this, audioIndex);
+//        decodeAudioThread.detach();
+        playerStatus->setAudioPrepare(true);
+        playerStatus->setAudioDecodeFinish(true);
     } else {
         LOGE("decode", "未找到音频流");
         playerStatus->setAudioPrepare(true);
@@ -92,7 +94,7 @@ void Decode::decodeVideo(int videoIndex, const char *vertexCode, const char *fra
                     videoPlayer->setData(packet);
                     i++;
                     LOGE("decode", "解码了%d帧", i);
-                    av_usleep(30000);
+//                    av_usleep(30000);
                 }
             } else {
                 break;
@@ -156,10 +158,10 @@ Decode::Decode(PlayerStatus *playerStatus) {
 }
 
 void Decode::play(int w, int h) {
-    if (audioIndex != -1) {
-        std::thread audioPlayThread(&Decode::audioPlay, this);
-        audioPlayThread.detach();
-    }
+//    if (audioIndex != -1) {
+//        std::thread audioPlayThread(&Decode::audioPlay, this);
+//        audioPlayThread.detach();
+//    }
     if (videoIndex != -1) {
         std::thread videoPlayThread(&Decode::videoPlay, this, w, h);
         videoPlayThread.detach();

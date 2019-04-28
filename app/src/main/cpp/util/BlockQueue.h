@@ -10,7 +10,7 @@
 
 #include <queue>
 #include <mutex>
-
+#define BlockQueue_TAG "BlockQueue"
 extern "C" {
 #include <libavcodec/avcodec.h>
 }

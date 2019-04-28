@@ -5,9 +5,10 @@
 
 
 #include "VideoPlayer.h"
+#include "../util/FFmpegError.h"
 
 
-static BlockQueue videoQueue;
+BlockQueue videoQueue;
 EGLUtils *eglUtils;
 GLUtils *glUtils;
 
@@ -50,7 +51,7 @@ void VideoPlayer::init() {
 
     textureIds = glUtils->createTexture();
     if (textureIds == nullptr) {
-        LOGE(LOG_TAG, "创建texture数组失败");
+        LOGE(VideoPlayer_TAG, "创建texture数组失败");
         return;
     }
 
@@ -59,7 +60,6 @@ void VideoPlayer::init() {
 }
 
 void VideoPlayer::drawFrame(AVFrame *frame) {
-    LOGE(LOG_TAG, "开始绘制");
     glClear(GL_COLOR_BUFFER_BIT || GL_DEPTH_BUFFER_BIT);
     glUseProgram(glUtils->program);
     bindTexture(frame);
@@ -75,11 +75,10 @@ void VideoPlayer::drawFrame(AVFrame *frame) {
 
 
 void VideoPlayer::play(int w, int h) {
-    //todo 花屏 怀疑是队列的问题
     eglUtils = new EGLUtils(window);
     glUtils = new GLUtils(vertexCode, fragCode);
     init();
-    LOGE(LOG_TAG, "开始播放");
+    LOGE(VideoPlayer_TAG, "开始播放");
     glViewport(0, 0, w, h);
     AVPacket *packet = av_packet_alloc();
     AVFrame *pFrame = av_frame_alloc();
@@ -89,27 +88,26 @@ void VideoPlayer::play(int w, int h) {
         if (!playerStatus->isPause()) {
             isFinish = videoQueue.pop(packet, playerStatus->isVideoDecodeFinish());
             rst = avcodec_send_packet(pVideoCodecCtx, packet);
-            while (rst >= 0) {
+            if (rst >= 0) {
                 rst = avcodec_receive_frame(pVideoCodecCtx, pFrame);
                 if (rst == AVERROR(EAGAIN)) {
                     av_usleep(1000);
-                    LOGE(LOG_TAG, "%s", "读取解码数据失败");
+                    LOGE(VideoPlayer_TAG, "读取解码数据失败%s", FFmpegError::showError(rst));
                     continue;
                 } else if (rst == AVERROR_EOF) {
                     av_usleep(1000);
-                    LOGE(LOG_TAG, "%s", "EOF解码完成");
+                    LOGE(VideoPlayer_TAG, "%s", "EOF解码完成");
                     break;
                 } else if (rst < 0) {
                     av_usleep(1000);
-                    LOGE(LOG_TAG, "%s", "解码出错");
+                    LOGE(VideoPlayer_TAG, "%s", "解码出错");
                     continue;
                 }
 
                 if (pFrame->format == AV_PIX_FMT_YUV420P) {
-                    LOGE(LOG_TAG, "获取frame成功,解码后的格式是YUV420P");
+                    LOGE(VideoPlayer_TAG, "line in 109:解码成功");
                     drawFrame(pFrame);
                 } else {
-                    LOGE(LOG_TAG, "获取frame成功,格式为%d", pFrame->format);
                     AVFrame *pFrame420P = av_frame_alloc();
                     int num = av_image_get_buffer_size(AV_PIX_FMT_YUV420P,
                                                        pVideoCodecCtx->width,
@@ -147,6 +145,7 @@ void VideoPlayer::play(int w, int h) {
                 av_usleep(1000);
             }
         }
+        av_usleep(30000);
     } while (!isFinish);
     playerStatus->setVideoPlayFinish(true);
     playerStatus->checkFinish();

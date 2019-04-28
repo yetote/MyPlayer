@@ -90,6 +90,7 @@ add_library( # Sets the name of the library.
         native-lib.cpp
         util/PlayerStatus.cpp
         decode/Decode.cpp
+        util/FFmpegError.cpp
         util/CallBack.cpp
         util/BlockQueue.cpp
         util/EGLUtils.cpp

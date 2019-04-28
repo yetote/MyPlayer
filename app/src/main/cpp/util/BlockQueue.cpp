@@ -27,9 +27,13 @@ bool BlockQueue::pop(AVPacket *packet1, bool isFinish) {
         LOGE("blockQueue", "the messagequeue is empty ,waiting producer add message ");
         cond.wait(lock);
     } else {
-        av_packet_ref(packet1, queue.front());
-        LOGE("blockQueue", "packet出队，队列剩余:%d", queue.size());
-        queue.pop();
+        int rst = av_packet_ref(packet1, queue.front());
+        if (rst == 0) {
+            LOGE("blockQueue", "packet出队，队列剩余:%d", queue.size());
+            queue.pop();
+        } else{
+            LOGE(BlockQueue_TAG,"line in 35:复制packet失败%d",rst);
+        }
     }
     cond.notify_all();
     return false;

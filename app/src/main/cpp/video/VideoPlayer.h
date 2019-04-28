@@ -17,7 +17,7 @@ extern "C" {
 #include "../ffmpeg/includes/libavutil/imgutils.h"
 #include "../ffmpeg/includes/libavutil/time.h"
 };
-
+#define VideoPlayer_TAG "VideoPlayer"
 class VideoPlayer {
 public:
     VideoPlayer(PlayerStatus *, const char *vertexCode, const char *fragCode,

@@ -32,7 +32,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        path = this.getExternalCacheDir().getPath() + "/res/test.mp4";
+        path = this.getExternalCacheDir().getPath() + "/res/wolves.mp4";
         init();
 
         surfaceHolder.addCallback(new SurfaceHolder.Callback() {

@@ -128,9 +128,9 @@ AudioPlayer::onAudioReady(oboe::AudioStream *audioStream, void *audioData, int32
         }
 
         auto buffer = static_cast<uint8_t *>(audioData);
-        while (remainSize < numFrames * 4) {
-            checkSize(numFrames);
-        }
+//        while (remainSize < numFrames * 4) {
+        checkSize(numFrames);
+//        }
         int readSize = 0;
         for (int i = 0; i < numFrames * 4; ++i) {
             buffer[i] = dataArray[i];
@@ -148,12 +148,13 @@ AudioPlayer::onAudioReady(oboe::AudioStream *audioStream, void *audioData, int32
 }
 
 
-
 int AudioPlayer::pop() {
     memset(outBuffer, 0, MAX_AUDIO_FRAME_SIZE);
     bool isFinish;
-    do {
+    while (true) {
         isFinish = audioQueue->pop(packet, playerStatus->isAudioDecodeFinish());
+        LOGE(AudioPlayer_TAG, "line in 157:audioSize=%d", packet->flags);
+        LOGE(AudioPlayer_TAG, "line in 157:audio_packet_index=%d", packet->stream_index);
         int ret;
         ret = avcodec_send_packet(audioCodecCtx, packet);
         if (ret == 0) {
@@ -183,7 +184,7 @@ int AudioPlayer::pop() {
             LOGE(AudioPlayer_TAG, "line in 191:outbufferSize=%d", outBufferSize);
             return outBufferSize;
         }
-    } while (!isFinish);
+    }
 }
 
 

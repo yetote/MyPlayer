@@ -34,9 +34,9 @@ public:
 
     virtual ~BlockQueue();
 
+    std::queue<AVPacket *> queue;
 private:
     AVPacket *packet;
-    std::queue<AVPacket *> queue;
     std::condition_variable cond;
     std::mutex mutex;
     int maxSize = 0;

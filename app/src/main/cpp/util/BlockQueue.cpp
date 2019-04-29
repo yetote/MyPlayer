@@ -7,13 +7,14 @@
 
 void BlockQueue::push(AVPacket *packet) {
     std::unique_lock<decltype(mutex)> lock(mutex);
-    while (queue.size() >= maxSize) {
-        LOGE("blockQueue", "队列已满，阻塞中：%d", queue.size());
-        cond.wait(lock);
-    }
-    queue.push(packet);
+//    while (queue.size() >= 10) {
+//        LOGE("blockQueue", "队列已满，阻塞中：%d", queue.size());
+//        cond.wait(lock);
+//    }
+    av_packet_ref(this->packet, packet);
+    queue.push(this->packet);
     LOGE("blockQueue", "packet入队，队列容量:%d", queue.size());
-    LOGE("blockQueue", "packet入队，地址为:%p", packet);
+    LOGE("blockQueue", "packet入队，地址为:%p", this->packet);
 
     cond.notify_all();
 }
@@ -43,7 +44,6 @@ bool BlockQueue::pop(AVPacket *packet1, bool isFinish) {
 }
 
 void BlockQueue::init() {
-//    packet = av_packet_alloc();
 }
 
 void BlockQueue::stop() {
@@ -66,7 +66,9 @@ void BlockQueue::setMaxSize(int size) {
     maxSize = size;
 }
 
-BlockQueue::BlockQueue(int maxSize) : maxSize(maxSize) {}
+BlockQueue::BlockQueue(int maxSize) : maxSize(maxSize) {
+    packet = av_packet_alloc();
+}
 
 BlockQueue::~BlockQueue() {
 

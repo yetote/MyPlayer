@@ -39,7 +39,6 @@ bool BlockQueue::pop(AVPacket *packet1, bool isFinish) {
             LOGE(BlockQueue_TAG, "line in 35:复制packet失败%d", rst);
         }
     }
-    LOGE("blockQueue", "队列为空");
     cond.notify_all();
     return false;
 }

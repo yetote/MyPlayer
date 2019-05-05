@@ -30,8 +30,9 @@ public class MyPlayer {
 
     /**
      * 初始化完成后，ffmpeg会回调此接口
-     * @param isSuccess  初始化是否成功
-     * @param error  错误码
+     *
+     * @param isSuccess 初始化是否成功
+     * @param error     错误码
      */
     void onPrepared(boolean isSuccess, int error) {
         if (ffmpegCallBack != null) {
@@ -61,6 +62,11 @@ public class MyPlayer {
         } else {
             Log.e(TAG, "onStop: " + "无法该回调接口");
         }
+    }
+
+    boolean isSupport(String name) {
+        MediaCodecSupport mediaCodecSupport = new MediaCodecSupport();
+        return mediaCodecSupport.isSupport(name);
     }
 
     /**

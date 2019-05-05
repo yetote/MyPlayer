@@ -1,5 +1,6 @@
 package com.example.myplayer;
 
+import android.media.MediaCodecList;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.SurfaceHolder;
@@ -10,6 +11,7 @@ import android.widget.ImageView;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.constraintlayout.widget.ConstraintLayout;
 
+import com.example.myplayer.player.MediaCodecSupport;
 import com.example.myplayer.player.MyPlayer;
 import com.example.myplayer.player.gl.utils.TextRecourseReader;
 import com.example.myplayer.player.listener.FFmpegCallBack;
@@ -27,6 +29,7 @@ public class MainActivity extends AppCompatActivity {
     private String vertexCode, fragCode;
     private int w, h;
     private boolean isPlaying;
+    private String networkPath = "http://gslb.miaopai.com/stream/J7NezBpr68nZtH8chOL9hyzkiRsk0rw6.mp4?vend=miaopai&ssig=6c1263f8cc78ac51aaacce2293dbab87&time_stamp=1556778520561&mpflag=32";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -45,7 +48,7 @@ public class MainActivity extends AppCompatActivity {
             public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
                 w = width;
                 h = height;
-                player.prepare(path, vertexCode, fragCode, holder.getSurface());
+                player.prepare(networkPath, vertexCode, fragCode, holder.getSurface());
             }
 
             @Override
@@ -57,6 +60,7 @@ public class MainActivity extends AppCompatActivity {
         click();
 
         callback();
+
 
     }
 
@@ -104,7 +108,7 @@ public class MainActivity extends AppCompatActivity {
                 start.setImageDrawable(getResources().getDrawable(R.mipmap.pause, null));
                 player.recover();
             }
-            isPlaying=!isPlaying;
+            isPlaying = !isPlaying;
         });
     }
 
@@ -116,6 +120,7 @@ public class MainActivity extends AppCompatActivity {
         surfaceHolder = surfaceView.getHolder();
         vertexCode = TextRecourseReader.readTextFileFromResource(this, R.raw.yuv_vertex_shader);
         fragCode = TextRecourseReader.readTextFileFromResource(this, R.raw.yuv_frag_shader);
+        MediaCodecSupport codecSupport = new MediaCodecSupport();
     }
 
 }

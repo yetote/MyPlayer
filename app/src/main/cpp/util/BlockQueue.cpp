@@ -21,7 +21,7 @@ void BlockQueue::push(AVPacket *packet) {
 
 bool BlockQueue::pop(AVPacket *packet1, bool isFinish) {
     std::unique_lock<decltype(mutex)> lock(mutex);
-
+//    mutex.lock();
     if (isFinish && queue.empty()) {
         LOGE("blockQueue", "播放完成");
         cond.notify_all();

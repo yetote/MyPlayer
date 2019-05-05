@@ -8,6 +8,10 @@
 
 #include <jni.h>
 
+#define CallBack_TAG "CallBack"
+
+#include <string>
+
 class CallBack {
 public:
 
@@ -23,7 +27,11 @@ public:
     void onPrepare(THREAD_TYPE threadType, bool isSuccess, int errorCode);
 
     void onFinish(THREAD_TYPE threadType);
+
     void onPause(THREAD_TYPE threadType);
+
+    bool onCheckSupport(THREAD_TYPE threadType, const char *name);
+
 
 private:
     JavaVM *jvm;
@@ -34,6 +42,7 @@ private:
     jmethodID preparedId;
     jmethodID finishId;
     jmethodID pauseId;
+    jmethodID checkSupportId;
 };
 
 

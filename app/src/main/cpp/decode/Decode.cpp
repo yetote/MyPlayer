@@ -157,6 +157,14 @@ void Decode::findCodec(AVCodecContext **codecCtx, AVCodec *codec, AVStream *stre
         LOGE("codec", "无法复制解码器环境");
         return;
     }
+    bool isSupport = playerStatus->checkSupport((*codecCtx)->codec->name);
+    if (isSupport) {
+        LOGE(Decode_TAG, "line in 162:%s支持硬解", (*codecCtx)->codec->name);
+        char * hardwareCodecName= (*codecCtx)->codec->name+"";
+        codec = avcodec_find_decoder_by_name("h264_mediacodec");
+    } else {
+        codec = avcodec_find_decoder(stream->codecpar->codec_id);
+    }
     rst = avcodec_open2(*codecCtx, codec, null);
     if (rst != 0) {
         LOGE("codec", "打开解码器失败");
@@ -167,9 +175,11 @@ void Decode::findCodec(AVCodecContext **codecCtx, AVCodec *codec, AVStream *stre
 void Decode::startDecode() {
 
     while (!playerStatus->isPause()) {
-        if (audioPlayer->audioQueue->queue.size() >= 100 ||
-            videoPlayer->videoQueue->queue.size() >= 100) {
-            LOGE(Decode_TAG, "line in 172:队列阻塞 ");
+        if (audioPlayer->audioQueue->queue.size() >= 400 ||
+            videoPlayer->videoQueue->queue.size() >= 40) {
+            LOGE(Decode_TAG, "line in 172:队列阻塞 \n,audioBlockSize=%d,\n videoBlockSize=%d",
+                 audioPlayer->audioQueue->queue.size(), videoPlayer->videoQueue->queue.size());
+            av_usleep(1000);
             continue;
         }
         AVPacket *packet = av_packet_alloc();
@@ -188,7 +198,7 @@ void Decode::startDecode() {
             }
         }
         av_packet_unref(packet);
-        av_usleep(1000);
+
     }
 //    av_packet_free(&packet);
 //    av_packet_free(&packet);

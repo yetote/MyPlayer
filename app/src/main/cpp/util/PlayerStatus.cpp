@@ -111,5 +111,10 @@ void PlayerStatus::setPause(bool pause) {
     PlayerStatus::pause = pause;
 }
 
+bool PlayerStatus::checkSupport(const char *name) {
+
+    return callBack->onCheckSupport(callBack->CHILD_THREAD, name);
+}
+
 
 

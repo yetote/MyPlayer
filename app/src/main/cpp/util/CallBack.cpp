@@ -3,6 +3,7 @@
 //
 
 #include "CallBack.h"
+#include "Log.h"
 
 CallBack::CallBack(JavaVM *jvmParam, JNIEnv *envParam, jobject objParam) {
     jvm = jvmParam;
@@ -12,6 +13,7 @@ CallBack::CallBack(JavaVM *jvmParam, JNIEnv *envParam, jobject objParam) {
     preparedId = env->GetMethodID(jlz, "onPrepared", "(ZI)V");
     finishId = env->GetMethodID(jlz, "onFinish", "()V");
     pauseId = env->GetMethodID(jlz, "onPause", "()V");
+    checkSupportId = env->GetMethodID(jlz, "isSupport", "(Ljava/lang/String;)Z");
 }
 
 void CallBack::onPrepare(CallBack::THREAD_TYPE threadType, bool isSuccess, int errorCode) {
@@ -50,6 +52,25 @@ void CallBack::onPause(CallBack::THREAD_TYPE threadType) {
         env->CallVoidMethod(obj, pauseId);
         jvm->DetachCurrentThread();
     }
+}
+
+
+bool CallBack::onCheckSupport(CallBack::THREAD_TYPE threadType, const char *namePram) {
+    bool isSupport;
+    if (threadType == MAIN_THREAD) {
+        jstring name = env->NewStringUTF(namePram);
+        isSupport = env->CallBooleanMethod(obj, checkSupportId, name);
+        env->DeleteLocalRef(name);
+    } else {
+        JNIEnv *env;
+        jvm->AttachCurrentThread(&env, 0);
+        jstring name = env->NewStringUTF(namePram);
+        isSupport = env->CallBooleanMethod(obj, checkSupportId, name);
+        env->DeleteLocalRef(name);
+        jvm->DetachCurrentThread();
+    }
+    LOGE(CallBack_TAG, "line in 67:isSupport%d", isSupport);
+    return isSupport;
 }
 
 

@@ -52,6 +52,8 @@ public:
 
     void checkPause();
 
+    bool checkSupport(const char *name);
+
     void setPause(bool pause);
 
 private:

@@ -53,7 +53,7 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
-                player.prepare(path, vertexCode, fragCode, holder.getSurface());
+                player.prepare(networkPath, vertexCode, fragCode, holder.getSurface());
                 w = width;
                 h = height;
             }
@@ -73,18 +73,21 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
                 if (fromUser) {
-                    player.seek(progress);
+                    Log.e(TAG, "onProgressChanged: progress" + progress);
                 }
             }
 
             @Override
             public void onStartTrackingTouch(SeekBar seekBar) {
                 Log.e(TAG, "onStartTrackingTouch: ");
+                player.pause();
             }
 
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
-                Log.e(TAG, "onStopTrackingTouch: ");
+                Log.e(TAG, "onStopTrackingTouch: " + seekBar.getProgress());
+                player.seek(seekBar.getProgress());
+                player.recover();
             }
         });
 
@@ -127,6 +130,7 @@ public class MainActivity extends AppCompatActivity {
                         .subscribe(integer -> {
                             seekBar.setProgress(currentTime);
                             currentTv.setText(pts2Time(currentTime));
+                            Log.e(TAG, "onPlaying: "+pts2Time(currentTime) );
                         });
             }
         });

@@ -124,7 +124,11 @@ AudioPlayer::onAudioReady(oboe::AudioStream *audioStream, void *audioData, int32
 
     latencyTuner->tune();
     auto buffer = static_cast<uint8_t *>(audioData);
-    if (currentTime - lastTime >= 1) {
+    LOGE(AudioPlayer_TAG, "line in 128:currentTime=%d\nlastTime=%d", currentTime, lastTime);
+    if (lastTime > currentTime) {
+        lastTime = currentTime;
+    }
+    if (currentTime - lastTime >= 0.5) {
         playerStatus->callPlaying(currentTime);
         lastTime = currentTime;
     }
@@ -241,6 +245,7 @@ void AudioPlayer::clear() {
     audioQueue->clear();
     memset(dataArray, 0, 44100 * 2 * 4);
     remainSize = 0;
+    lastTime = 0;
 }
 
 void AudioPlayer::checkSize(int32_t numFrames) {

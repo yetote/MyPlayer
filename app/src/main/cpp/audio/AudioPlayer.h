@@ -70,7 +70,7 @@ private:
     uint8_t *dataArray;
     uint8_t *outBuffer;
     int outChannelNum;
-    int currentTime, lastTime;
+    float currentTime, lastTime;
     int32_t remainSize;
 
     void checkSize(int32_t frames);

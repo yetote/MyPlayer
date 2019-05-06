@@ -166,8 +166,8 @@ void Decode::findCodec(AVCodecContext **codecCtx, AVCodec *codec, AVStream *stre
 void Decode::startDecode() {
 
     while (!playerStatus->isStop()) {
-        if (audioPlayer->audioQueue->queue.size() >= 100 ||
-            videoPlayer->videoQueue->queue.size() >= 40) {
+        if (audioPlayer->audioQueue->queue.size() >= 10 ||
+            videoPlayer->videoQueue->queue.size() >= 10) {
             LOGE(Decode_TAG, "line in 172:队列阻塞 \n,audioBlockSize=%d,\n videoBlockSize=%d",
                  audioPlayer->audioQueue->queue.size(), videoPlayer->videoQueue->queue.size());
             av_usleep(1000);

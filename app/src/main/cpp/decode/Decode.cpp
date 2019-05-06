@@ -54,8 +54,8 @@ void Decode::prepare(const char *path, const char *vertexCode, const char *fragC
         playerStatus->setAudioDecodeFinish(true);
     }
     if (videoIndex != -1) {
-//        pVideoStream = pFmtCtx->streams[videoIndex];
-//        findCodec(&videoPlayer->pVideoCodecCtx, pVideoCodec, pVideoStream);
+        pVideoStream = pFmtCtx->streams[videoIndex];
+        findCodec(&videoPlayer->pVideoCodecCtx, pVideoCodec, pVideoStream);
         playerStatus->setVideoPrepare(true);
         playerStatus->checkPrepare(totalTime);
     } else {
@@ -109,19 +109,16 @@ void Decode::recover() {
 }
 
 void Decode::seek(int secs) {
-    playerStatus->setPause(true);
     int64_t rel = secs * AV_TIME_BASE;
     avformat_seek_file(pFmtCtx, -1, INT64_MIN, rel, INT64_MAX, 0);
     if (audioPlayer != nullptr) {
         audioPlayer->clear();
         avcodec_flush_buffers(audioPlayer->audioCodecCtx);
     }
-
     if (videoPlayer != nullptr) {
         videoPlayer->clear();
         avcodec_flush_buffers(videoPlayer->pVideoCodecCtx);
     }
-    playerStatus->setPause(false);
 }
 
 void Decode::findCodec(AVCodecContext **codecCtx, AVCodec *codec, AVStream *stream) {
@@ -170,7 +167,7 @@ void Decode::startDecode() {
 
     while (!playerStatus->isStop()) {
         if (audioPlayer->audioQueue->queue.size() >= 100 ||
-            videoPlayer->videoQueue->queue.size() >= 10) {
+            videoPlayer->videoQueue->queue.size() >= 40) {
             LOGE(Decode_TAG, "line in 172:队列阻塞 \n,audioBlockSize=%d,\n videoBlockSize=%d",
                  audioPlayer->audioQueue->queue.size(), videoPlayer->videoQueue->queue.size());
             av_usleep(1000);

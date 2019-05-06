@@ -42,7 +42,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        path = this.getExternalCacheDir().getPath() + "/res/test.mp4";
+        path = this.getExternalCacheDir().getPath() + "/res/wolves.mp4";
         init();
 
         surfaceHolder.addCallback(new SurfaceHolder.Callback() {
@@ -53,7 +53,7 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
-                player.prepare(networkPath, vertexCode, fragCode, holder.getSurface());
+                player.prepare(path, vertexCode, fragCode, holder.getSurface());
                 w = width;
                 h = height;
             }
@@ -68,6 +68,25 @@ public class MainActivity extends AppCompatActivity {
 
         callback();
 
+
+        seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                if (fromUser) {
+                    player.seek(progress);
+                }
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+                Log.e(TAG, "onStartTrackingTouch: ");
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                Log.e(TAG, "onStopTrackingTouch: ");
+            }
+        });
 
     }
 
@@ -109,7 +128,6 @@ public class MainActivity extends AppCompatActivity {
                             seekBar.setProgress(currentTime);
                             currentTv.setText(pts2Time(currentTime));
                         });
-
             }
         });
 

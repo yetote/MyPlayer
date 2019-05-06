@@ -239,6 +239,8 @@ void AudioPlayer::pause() {
 
 void AudioPlayer::clear() {
     audioQueue->clear();
+    memset(dataArray, 0, 44100 * 2 * 4);
+    remainSize = 0;
 }
 
 void AudioPlayer::checkSize(int32_t numFrames) {

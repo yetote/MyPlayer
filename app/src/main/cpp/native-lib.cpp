@@ -60,6 +60,7 @@ Java_com_example_myplayer_player_MyPlayer_recover(JNIEnv *env, jobject instance)
 JNIEXPORT void JNICALL
 Java_com_example_myplayer_player_MyPlayer_seek(JNIEnv *env, jobject instance, jint seekTime) {
 
-    // TODO
-
+    decode->pause();
+    decode->seek(seekTime);
+    decode->recover();
 }

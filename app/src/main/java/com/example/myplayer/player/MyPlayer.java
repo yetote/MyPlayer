@@ -69,6 +69,14 @@ public class MyPlayer {
         return mediaCodecSupport.isSupport(name);
     }
 
+    void onPlaying(int currentTime) {
+        if (ffmpegCallBack != null) {
+            ffmpegCallBack.onPlaying(currentTime);
+        } else {
+            Log.e(TAG, "onPlaying: " + "无法该回调接口");
+        }
+    }
+
     /**
      * ffmpeg以及egl,gles,oboe的初始化
      *
@@ -96,4 +104,10 @@ public class MyPlayer {
      * 暂停后继续播放
      */
     public native void recover();
+
+    /**
+     * 跳转
+     * @param seekTime 跳转的时间
+     */
+    public native void seek(int seekTime);
 }

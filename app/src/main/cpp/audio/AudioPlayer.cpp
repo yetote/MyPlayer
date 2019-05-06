@@ -121,27 +121,25 @@ void AudioPlayer::setBuilderParams(AudioStreamBuilder *builder) {
 
 oboe::DataCallbackResult
 AudioPlayer::onAudioReady(oboe::AudioStream *audioStream, void *audioData, int32_t numFrames) {
-    if (!playerStatus->isPause()) {
-        latencyTuner->tune();
-        if (currentTime - lastTime >= 1) {
-//            playerStatus->callPlaying(currentTime);
-        }
 
-        auto buffer = static_cast<uint8_t *>(audioData);
-        while (remainSize < numFrames * 4) {
+    latencyTuner->tune();
+    auto buffer = static_cast<uint8_t *>(audioData);
+    if (currentTime - lastTime >= 1) {
+        playerStatus->callPlaying(currentTime);
+        lastTime = currentTime;
+    }
+
+    while (remainSize < numFrames * 4) {
         checkSize(numFrames);
-        }
-        int readSize = 0;
-        for (int i = 0; i < numFrames * 4; ++i) {
-            buffer[i] = dataArray[i];
-            readSize++;
-        }
-        remainSize -= readSize;
-        for (int i = 0; i < remainSize; ++i) {
-            dataArray[i] = dataArray[readSize + i];
-        }
-        readSize = 0;
-        return DataCallbackResult::Continue;
+    }
+    int readSize = 0;
+    for (int i = 0; i < numFrames * 4; ++i) {
+        buffer[i] = dataArray[i];
+        readSize++;
+    }
+    remainSize -= readSize;
+    for (int i = 0; i < remainSize; ++i) {
+        dataArray[i] = dataArray[readSize + i];
     }
 
     return DataCallbackResult::Continue;
@@ -150,9 +148,8 @@ AudioPlayer::onAudioReady(oboe::AudioStream *audioStream, void *audioData, int32
 
 int AudioPlayer::pop() {
     memset(outBuffer, 0, MAX_AUDIO_FRAME_SIZE);
-    bool isFinish;
     while (true) {
-        isFinish = audioQueue->pop(packet, playerStatus->isAudioDecodeFinish());
+        audioQueue->pop(packet, playerStatus->isAudioDecodeFinish());
         LOGE(AudioPlayer_TAG, "line in 157:audioSize=%d", packet->size);
         LOGE(AudioPlayer_TAG, "line in 157:audio_packet_index=%d", packet->stream_index);
         int ret;
@@ -180,11 +177,15 @@ int AudioPlayer::pop() {
                                                            AV_SAMPLE_FMT_S16, 1);
             LOGE(AudioPlayer_TAG, "line in 187:时间为%f", pFrame->pts * av_q2d(timeBase));
             currentTime = pFrame->pts * av_q2d(timeBase);
+            if (currentTime > totalTime) {
+                currentTime = lastTime;
+            }
             memcpy(dataArray + remainSize, outBuffer, size_t(outBufferSize));
             LOGE(AudioPlayer_TAG, "line in 191:outbufferSize=%d", outBufferSize);
             return outBufferSize;
         }
     }
+    return 0;
 }
 
 
@@ -232,8 +233,8 @@ AudioPlayer::~AudioPlayer() {
     pFrame = nullptr;
 }
 
-bool AudioPlayer::pause() {
-//    stream->requestPause();
+void AudioPlayer::pause() {
+    stream->requestPause();
 }
 
 void AudioPlayer::clear() {
@@ -247,4 +248,8 @@ void AudioPlayer::checkSize(int32_t numFrames) {
     memset(dataArray + remainSize, 0, MAX_AUDIO_FRAME_SIZE - remainSize);
     int addSize = pop();
     remainSize = addSize + remainSize;
+}
+
+void AudioPlayer::recover() {
+    stream->requestStart();
 }

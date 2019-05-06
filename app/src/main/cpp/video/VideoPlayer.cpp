@@ -75,61 +75,67 @@ void VideoPlayer::play(int w, int h) {
     AVPacket *packet = av_packet_alloc();
     AVFrame *pFrame = av_frame_alloc();
     int rst;
-    while (true) {
-        isFinish = videoQueue->pop(packet, false);
-        LOGE(VideoPlayer_TAG,"line in 80:videoSize=%d",packet->size);
-        rst = avcodec_send_packet(pVideoCodecCtx, packet);
-        if (rst >= 0) {
-            rst = avcodec_receive_frame(pVideoCodecCtx, pFrame);
-            if (rst == AVERROR(EAGAIN)) {
-                LOGE(VideoPlayer_TAG, "读取解码数据失败%d", rst);
-                continue;
-            } else if (rst == AVERROR_EOF) {
-                LOGE(VideoPlayer_TAG, "%s", "EOF解码完成");
-                break;
-            } else if (rst < 0) {
-                LOGE(VideoPlayer_TAG, "%s", "解码出错");
-                continue;
+    while (!playerStatus->isStop()) {
+        if (!playerStatus->isPause()) {
+
+            isFinish = videoQueue->pop(packet, false);
+            LOGE(VideoPlayer_TAG, "line in 80:videoSize=%d", packet->size);
+            rst = avcodec_send_packet(pVideoCodecCtx, packet);
+            if (rst >= 0) {
+                rst = avcodec_receive_frame(pVideoCodecCtx, pFrame);
+                if (rst == AVERROR(EAGAIN)) {
+                    LOGE(VideoPlayer_TAG, "读取解码数据失败%d", rst);
+                    continue;
+                } else if (rst == AVERROR_EOF) {
+                    LOGE(VideoPlayer_TAG, "%s", "EOF解码完成");
+                    break;
+                } else if (rst < 0) {
+                    LOGE(VideoPlayer_TAG, "%s", "解码出错");
+                    continue;
+                }
+                if (pFrame->format == AV_PIX_FMT_YUV420P) {
+                    LOGE(VideoPlayer_TAG, "line in 109:解码成功");
+                    drawFrame(pFrame);
+                } else {
+                    AVFrame *pFrame420P = av_frame_alloc();
+                    int num = av_image_get_buffer_size(AV_PIX_FMT_YUV420P,
+                                                       pVideoCodecCtx->width,
+                                                       pVideoCodecCtx->height, 1);
+                    uint8_t *buffer = static_cast<uint8_t *>(av_malloc(num * sizeof(uint8_t)));
+                    av_image_fill_arrays(pFrame420P->data,
+                                         pFrame420P->linesize,
+                                         buffer,
+                                         AV_PIX_FMT_YUV420P,
+                                         pVideoCodecCtx->width,
+                                         pVideoCodecCtx->height,
+                                         1);
+                    SwsContext *swsContext = sws_getContext(pVideoCodecCtx->width,
+                                                            pVideoCodecCtx->height,
+                                                            pVideoCodecCtx->pix_fmt,
+                                                            pVideoCodecCtx->width,
+                                                            pVideoCodecCtx->height,
+                                                            AV_PIX_FMT_YUV420P,
+                                                            SWS_BICUBIC, null, null, null
+                    );
+                    sws_scale(swsContext,
+                              pFrame->data,
+                              pFrame->linesize,
+                              0,
+                              pFrame->height,
+                              pFrame420P->data,
+                              pFrame420P->linesize);
+                    drawFrame(pFrame420P);
+                    av_frame_free(&pFrame420P);
+                    av_free(pFrame420P);
+                    av_free(buffer);
+                    pFrame420P = nullptr;
+                    sws_freeContext(swsContext);
+                    LOGE(VideoPlayer_TAG, "line in 144:解码成功");
+                }
             }
-            if (pFrame->format == AV_PIX_FMT_YUV420P) {
-                LOGE(VideoPlayer_TAG, "line in 109:解码成功");
-                drawFrame(pFrame);
-            } else {
-                AVFrame *pFrame420P = av_frame_alloc();
-                int num = av_image_get_buffer_size(AV_PIX_FMT_YUV420P,
-                                                   pVideoCodecCtx->width,
-                                                   pVideoCodecCtx->height, 1);
-                uint8_t *buffer = static_cast<uint8_t *>(av_malloc(num * sizeof(uint8_t)));
-                av_image_fill_arrays(pFrame420P->data,
-                                     pFrame420P->linesize,
-                                     buffer,
-                                     AV_PIX_FMT_YUV420P,
-                                     pVideoCodecCtx->width,
-                                     pVideoCodecCtx->height,
-                                     1);
-                SwsContext *swsContext = sws_getContext(pVideoCodecCtx->width,
-                                                        pVideoCodecCtx->height,
-                                                        pVideoCodecCtx->pix_fmt,
-                                                        pVideoCodecCtx->width,
-                                                        pVideoCodecCtx->height,
-                                                        AV_PIX_FMT_YUV420P,
-                                                        SWS_BICUBIC, null, null, null
-                );
-                sws_scale(swsContext,
-                          pFrame->data,
-                          pFrame->linesize,
-                          0,
-                          pFrame->height,
-                          pFrame420P->data,
-                          pFrame420P->linesize);
-                drawFrame(pFrame420P);
-                av_frame_free(&pFrame420P);
-                av_free(pFrame420P);
-                av_free(buffer);
-                pFrame420P = nullptr;
-                sws_freeContext(swsContext);
-                LOGE(VideoPlayer_TAG, "line in 144:解码成功");
-            }
+        } else {
+            LOGE(VideoPlayer_TAG, "line in 137:暂停中");
+            av_usleep(1000);
         }
 
     }

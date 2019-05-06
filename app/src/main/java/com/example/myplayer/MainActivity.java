@@ -1,12 +1,13 @@
 package com.example.myplayer;
 
-import android.media.MediaCodecList;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.WindowManager;
 import android.widget.ImageView;
+import android.widget.SeekBar;
+import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.constraintlayout.widget.ConstraintLayout;
@@ -15,6 +16,10 @@ import com.example.myplayer.player.MediaCodecSupport;
 import com.example.myplayer.player.MyPlayer;
 import com.example.myplayer.player.gl.utils.TextRecourseReader;
 import com.example.myplayer.player.listener.FFmpegCallBack;
+
+import io.reactivex.Observable;
+import io.reactivex.ObservableOnSubscribe;
+import io.reactivex.android.schedulers.AndroidSchedulers;
 
 import static android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE;
 import static android.view.View.SYSTEM_UI_FLAG_HIDE_NAVIGATION;
@@ -30,6 +35,8 @@ public class MainActivity extends AppCompatActivity {
     private int w, h;
     private boolean isPlaying;
     private String networkPath = "http://gslb.miaopai.com/stream/J7NezBpr68nZtH8chOL9hyzkiRsk0rw6.mp4?vend=miaopai&ssig=6c1263f8cc78ac51aaacce2293dbab87&time_stamp=1556778520561&mpflag=32";
+    private SeekBar seekBar;
+    private TextView currentTv, totalTv;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -46,9 +53,9 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
+                player.prepare(networkPath, vertexCode, fragCode, holder.getSurface());
                 w = width;
                 h = height;
-                player.prepare(networkPath, vertexCode, fragCode, holder.getSurface());
             }
 
             @Override
@@ -68,13 +75,19 @@ public class MainActivity extends AppCompatActivity {
 
         player.setFFmpegCallBack(new FFmpegCallBack() {
             @Override
-            public void onPrepared(boolean isSuccess, int errorCode) {
+            public void onPrepared(boolean isSuccess, int totalTime) {
                 if (!isSuccess) {
-                    Log.e(TAG, "onPrepared: ffmpeg初始化失败,错误代码：" + errorCode);
+                    Log.e(TAG, "onPrepared: ffmpeg准备失败");
                 } else {
                     Log.e(TAG, "onPrepared: 准备成功");
-                    player.play(w, h);
-                    isPlaying = true;
+                    Observable.create((ObservableOnSubscribe<Integer>) emitter -> emitter.onNext(totalTime))
+                            .subscribeOn(AndroidSchedulers.mainThread())
+                            .subscribe(integer -> {
+                                seekBar.setMax(totalTime);
+                                totalTv.setText(pts2Time(totalTime));
+                                player.play(w, h);
+                                isPlaying = true;
+                            });
                 }
             }
 
@@ -88,7 +101,16 @@ public class MainActivity extends AppCompatActivity {
                 Log.e(TAG, "callback: 播放结束");
             }
 
+            @Override
+            public void onPlaying(int currentTime) {
+                Observable.create((ObservableOnSubscribe<Integer>) emitter -> emitter.onNext(currentTime))
+                        .subscribeOn(AndroidSchedulers.mainThread())
+                        .subscribe(integer -> {
+                            seekBar.setProgress(currentTime);
+                            currentTv.setText(pts2Time(currentTime));
+                        });
 
+            }
         });
 
     }
@@ -121,6 +143,26 @@ public class MainActivity extends AppCompatActivity {
         vertexCode = TextRecourseReader.readTextFileFromResource(this, R.raw.yuv_vertex_shader);
         fragCode = TextRecourseReader.readTextFileFromResource(this, R.raw.yuv_frag_shader);
         MediaCodecSupport codecSupport = new MediaCodecSupport();
+        seekBar = findViewById(R.id.seekBar);
+        currentTv = findViewById(R.id.currentTimeTv);
+        totalTv = findViewById(R.id.totalTimeTv);
     }
 
+    private String pts2Time(int ptsTime) {
+        int min, sec;
+        String time;
+        min = ptsTime / 60;
+        sec = ptsTime % 60;
+        if (min < 10) {
+            time = "0" + min + ":";
+        } else {
+            time = min + ":";
+        }
+        if (sec < 10) {
+            time += "0" + sec;
+        } else {
+            time += sec;
+        }
+        return time;
+    }
 }

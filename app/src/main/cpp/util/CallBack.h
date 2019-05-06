@@ -24,7 +24,7 @@ public:
 
     ~CallBack();
 
-    void onPrepare(THREAD_TYPE threadType, bool isSuccess, int errorCode);
+    void onPrepare(THREAD_TYPE threadType, bool isSuccess, int totalTime);
 
     void onFinish(THREAD_TYPE threadType);
 
@@ -32,6 +32,7 @@ public:
 
     bool onCheckSupport(THREAD_TYPE threadType, const char *name);
 
+    void onPlaying(THREAD_TYPE ,int);
 
 private:
     JavaVM *jvm;
@@ -43,6 +44,8 @@ private:
     jmethodID finishId;
     jmethodID pauseId;
     jmethodID checkSupportId;
+    jmethodID onPlayingId;
+
 };
 
 

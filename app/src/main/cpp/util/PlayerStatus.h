@@ -46,7 +46,7 @@ public:
 
     bool isPause() const;
 
-    void checkPrepare();
+    void checkPrepare(int);
 
     void checkFinish();
 
@@ -55,6 +55,8 @@ public:
     bool checkSupport(const char *name);
 
     void setPause(bool pause);
+
+    void callPlaying(int);
 
 private:
     bool videoDecodeFinish;

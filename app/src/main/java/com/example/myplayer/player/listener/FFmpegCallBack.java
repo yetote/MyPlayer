@@ -28,4 +28,11 @@ public interface FFmpegCallBack {
      * @param errorCode 错误代码
      */
     void onPrepared(boolean isSuccess, int errorCode);
+
+    /**
+     * 播放中回调
+     *
+     * @param currentTime 当前的播放时间
+     */
+    void onPlaying(int currentTime);
 }

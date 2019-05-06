@@ -36,12 +36,15 @@ public:
 
     ~AudioPlayer();
 
-    BlockQueue* audioQueue;
+    BlockQueue *audioQueue;
+    AVRational timeBase;
+    int totalTime;
 
     void play();
 
-    bool pause();
+    void pause();
 
+    void recover();
 
     void initOboe();
 
@@ -72,7 +75,6 @@ private:
 
     void checkSize(int32_t frames);
 
-    AVRational timeBase;
 };
 
 

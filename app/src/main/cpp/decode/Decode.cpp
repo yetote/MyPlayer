@@ -37,42 +37,27 @@ void Decode::prepare(const char *path, const char *vertexCode, const char *fragC
             videoIndex = i;
         }
     }
-//    if (audioIndex != -1) {
-//        std::thread decodeAudioThread(&Decode::decodeAudio, this, audioIndex);
-//        decodeAudioThread.detach();
-//    } else {
-//        LOGE("decode", "未找到音频流");
-//        playerStatus->setAudioPrepare(true);
-//        playerStatus->setAudioDecodeFinish(true);
-//    }
-//    if (videoIndex != -1) {
-//        std::thread decodeVideoThread(&Decode::decodeVideo, this, videoIndex, vertexCode, fragCode,
-//                                      window);
-//        decodeVideoThread.detach();
-//    } else {
-//        LOGE("decode", "未找到视频流");
-//        playerStatus->setVideoPrepare(true);
-//        playerStatus->setVideoDecodeFinish(true);
-//    }
-
+    int totalTime = pFmtCtx->duration / AV_TIME_BASE;
     if (audioIndex != -1) {
         pAudioStream = pFmtCtx->streams[audioIndex];
         findCodec(&audioPlayer->audioCodecCtx, pAudioCodec, pAudioStream);
         audioPlayer->channelNum = pAudioStream->codecpar->channels;
         audioPlayer->sampleRate = pAudioStream->codecpar->sample_rate;
         audioPlayer->initOboe();
+        audioPlayer->timeBase = pAudioStream->time_base;
+        audioPlayer->totalTime = totalTime;
         playerStatus->setAudioPrepare(true);
-        playerStatus->checkPrepare();
+        playerStatus->checkPrepare(totalTime);
     } else {
         LOGE("decode", "未找到音频流");
         playerStatus->setAudioPrepare(true);
         playerStatus->setAudioDecodeFinish(true);
     }
     if (videoIndex != -1) {
-        pVideoStream = pFmtCtx->streams[videoIndex];
-        findCodec(&videoPlayer->pVideoCodecCtx, pVideoCodec, pVideoStream);
+//        pVideoStream = pFmtCtx->streams[videoIndex];
+//        findCodec(&videoPlayer->pVideoCodecCtx, pVideoCodec, pVideoStream);
         playerStatus->setVideoPrepare(true);
-        playerStatus->checkPrepare();
+        playerStatus->checkPrepare(totalTime);
     } else {
         LOGE("decode", "未找到视频流");
         playerStatus->setVideoPrepare(true);
@@ -81,8 +66,6 @@ void Decode::prepare(const char *path, const char *vertexCode, const char *fragC
     LOGE(Decode_TAG, "line in 81:audioIndex=%d,\n vidoeIndex=%d", audioIndex, videoIndex);
     std::thread startDecodeThread(&Decode::startDecode, this);
     startDecodeThread.detach();
-//    startDecode();
-
 }
 
 Decode::Decode(PlayerStatus *playerStatus) {
@@ -94,10 +77,10 @@ void Decode::play(int w, int h) {
         std::thread audioPlayThread(&Decode::audioPlay, this);
         audioPlayThread.detach();
     }
-    if (videoIndex != -1) {
-        std::thread videoPlayThread(&Decode::videoPlay, this, w, h);
-        videoPlayThread.detach();
-    }
+//    if (videoIndex != -1) {
+//        std::thread videoPlayThread(&Decode::videoPlay, this, w, h);
+//        videoPlayThread.detach();
+//    }
 }
 
 void Decode::audioPlay() {
@@ -106,13 +89,13 @@ void Decode::audioPlay() {
 
 
 void Decode::videoPlay(int w, int h) {
-    sleep(3);
     videoPlayer->play(w, h);
 }
 
 
 void Decode::pause() {
-//    playerStatus->setPause(true);
+    playerStatus->setPause(true);
+
     audioPlayer->pause();
 }
 
@@ -122,6 +105,7 @@ Decode::~Decode() {
 
 void Decode::recover() {
     playerStatus->setPause(false);
+    audioPlayer->recover();
 }
 
 void Decode::seek(int secs) {
@@ -158,13 +142,23 @@ void Decode::findCodec(AVCodecContext **codecCtx, AVCodec *codec, AVStream *stre
         return;
     }
     bool isSupport = playerStatus->checkSupport((*codecCtx)->codec->name);
-    if (isSupport) {
-        LOGE(Decode_TAG, "line in 162:%s支持硬解", (*codecCtx)->codec->name);
-        char * hardwareCodecName= (*codecCtx)->codec->name+"";
-        codec = avcodec_find_decoder_by_name("h264_mediacodec");
-    } else {
-        codec = avcodec_find_decoder(stream->codecpar->codec_id);
-    }
+//    if (isSupport) {
+//        codec = nullptr;
+//        LOGE(Decode_TAG, "line in 162:%s支持硬解", (*codecCtx)->codec->name);
+//        char hardwareCodecName[20];
+//        strcpy(hardwareCodecName, (*codecCtx)->codec->name);
+//        strcat(hardwareCodecName, "_mediacodec");
+//        LOGE(Decode_TAG, "line in 148:整理后的硬解格式为%s", hardwareCodecName);
+//        codec = avcodec_find_decoder_by_name(hardwareCodecName);
+//        if (codec == nullptr) {
+//            LOGE(Decode_TAG, "line in 153:未找到对应的解码器");
+//            return;
+//        }
+//    } else {
+//        codec = avcodec_find_decoder(stream->codecpar->codec_id);
+//    }
+    LOGE(Decode_TAG, "line in 151:name %s", codec->name);
+
     rst = avcodec_open2(*codecCtx, codec, null);
     if (rst != 0) {
         LOGE("codec", "打开解码器失败");
@@ -174,9 +168,9 @@ void Decode::findCodec(AVCodecContext **codecCtx, AVCodec *codec, AVStream *stre
 
 void Decode::startDecode() {
 
-    while (!playerStatus->isPause()) {
-        if (audioPlayer->audioQueue->queue.size() >= 400 ||
-            videoPlayer->videoQueue->queue.size() >= 40) {
+    while (!playerStatus->isStop()) {
+        if (audioPlayer->audioQueue->queue.size() >= 100 ||
+            videoPlayer->videoQueue->queue.size() >= 10) {
             LOGE(Decode_TAG, "line in 172:队列阻塞 \n,audioBlockSize=%d,\n videoBlockSize=%d",
                  audioPlayer->audioQueue->queue.size(), videoPlayer->videoQueue->queue.size());
             av_usleep(1000);
@@ -192,13 +186,12 @@ void Decode::startDecode() {
                 audioPlayer->audioQueue->push(&audioPacket);
             } else if (packet->stream_index == videoIndex) {
                 LOGE("startDecode", "line in 169:视频packet%p", packet);
-                av_packet_ref(&videoPacket, packet);
-                videoPlayer->videoQueue->push(&videoPacket);
+//                av_packet_ref(&videoPacket, packet);
+//                videoPlayer->videoQueue->push(&videoPacket);
                 LOGE(Decode_TAG, "line in 176:decodevideoIndex=%d", packet->stream_index);
             }
         }
         av_packet_unref(packet);
-
     }
 //    av_packet_free(&packet);
 //    av_packet_free(&packet);

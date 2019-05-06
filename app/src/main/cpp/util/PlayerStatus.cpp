@@ -86,10 +86,10 @@ void PlayerStatus::setStop(bool stop) {
     PlayerStatus::stop = stop;
 }
 
-void PlayerStatus::checkPrepare() {
+void PlayerStatus::checkPrepare(int totalTime) {
     LOGE(LOG_TAG, "audioPrepare:%d,videoPrepare%d", audioPrepare, videoPrepare);
     if (audioPrepare && videoPrepare) {
-        callBack->onPrepare(callBack->CHILD_THREAD, true, 0);
+        callBack->onPrepare(callBack->CHILD_THREAD, true, totalTime);
     }
 }
 
@@ -114,6 +114,10 @@ void PlayerStatus::setPause(bool pause) {
 bool PlayerStatus::checkSupport(const char *name) {
 
     return callBack->onCheckSupport(callBack->CHILD_THREAD, name);
+}
+
+void PlayerStatus::callPlaying(int currentTime) {
+    callBack->onPlaying(callBack->CHILD_THREAD, currentTime);
 }
 
 

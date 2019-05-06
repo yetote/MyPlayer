@@ -1,13 +1,10 @@
 package com.example.myplayer.player;
 
-import android.media.MediaCodec;
 import android.media.MediaCodecList;
-import android.media.MediaFormat;
 import android.util.Log;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
 
 import static android.media.MediaCodecList.REGULAR_CODECS;
 

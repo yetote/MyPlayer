@@ -34,10 +34,28 @@
         android:id="@+id/seekBar"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginStart="8dp"
-        android:layout_marginEnd="8dp"
         app:layout_constraintBottom_toBottomOf="@+id/start"
-        app:layout_constraintEnd_toStartOf="@+id/fill"
+        app:layout_constraintEnd_toStartOf="@+id/totalTimeTv"
+        app:layout_constraintStart_toEndOf="@+id/currentTimeTv"
+        app:layout_constraintTop_toTopOf="@+id/start" />
+
+    <TextView
+        android:id="@+id/currentTimeTv"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="00:00"
+        android:textColor="@color/white"
+        app:layout_constraintBottom_toBottomOf="@+id/start"
         app:layout_constraintStart_toEndOf="@+id/start"
         app:layout_constraintTop_toTopOf="@+id/start" />
+
+    <TextView
+        android:id="@+id/totalTimeTv"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="00:00"
+        android:textColor="@color/white"
+        app:layout_constraintBottom_toBottomOf="@+id/fill"
+        app:layout_constraintEnd_toStartOf="@+id/fill"
+        app:layout_constraintTop_toTopOf="@+id/fill" />
 </androidx.constraintlayout.widget.ConstraintLayout>

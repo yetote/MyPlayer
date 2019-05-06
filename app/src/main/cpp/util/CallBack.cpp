@@ -14,16 +14,17 @@ CallBack::CallBack(JavaVM *jvmParam, JNIEnv *envParam, jobject objParam) {
     finishId = env->GetMethodID(jlz, "onFinish", "()V");
     pauseId = env->GetMethodID(jlz, "onPause", "()V");
     checkSupportId = env->GetMethodID(jlz, "isSupport", "(Ljava/lang/String;)Z");
+    onPlayingId = env->GetMethodID(jlz, "onPlaying", "(I)V");
 }
 
-void CallBack::onPrepare(CallBack::THREAD_TYPE threadType, bool isSuccess, int errorCode) {
+void CallBack::onPrepare(CallBack::THREAD_TYPE threadType, bool isSuccess, int totalTime) {
 
     if (threadType == MAIN_THREAD) {
-        env->CallVoidMethod(obj, preparedId, isSuccess, errorCode);
+        env->CallVoidMethod(obj, preparedId, isSuccess, totalTime);
     } else {
         JNIEnv *env;
         jvm->AttachCurrentThread(&env, 0);
-        env->CallVoidMethod(obj, preparedId, isSuccess, errorCode);
+        env->CallVoidMethod(obj, preparedId, isSuccess, totalTime);
         jvm->DetachCurrentThread();
     }
 }
@@ -71,6 +72,17 @@ bool CallBack::onCheckSupport(CallBack::THREAD_TYPE threadType, const char *name
     }
     LOGE(CallBack_TAG, "line in 67:isSupport%d", isSupport);
     return isSupport;
+}
+
+void CallBack::onPlaying(CallBack::THREAD_TYPE threadType, int currentTime) {
+    if (threadType == MAIN_THREAD) {
+        env->CallVoidMethod(obj, onPlayingId, currentTime);
+    } else {
+        JNIEnv *env;
+        jvm->AttachCurrentThread(&env, 0);
+        env->CallVoidMethod(obj, onPlayingId, currentTime);
+        jvm->DetachCurrentThread();
+    }
 }
 
 

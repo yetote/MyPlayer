@@ -50,6 +50,7 @@ public:
 
     void clear();
 
+    void stop();
 private:
     Result result;
     bool isPlaying;

@@ -1,14 +1,19 @@
 package com.example.myplayer;
 
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
+import android.os.PersistableBundle;
 import android.util.Log;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
+import android.view.View;
 import android.view.WindowManager;
 import android.widget.ImageView;
 import android.widget.SeekBar;
 import android.widget.TextView;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.constraintlayout.widget.ConstraintLayout;
 
@@ -17,12 +22,19 @@ import com.example.myplayer.player.MyPlayer;
 import com.example.myplayer.player.gl.utils.TextRecourseReader;
 import com.example.myplayer.player.listener.FFmpegCallBack;
 
+import java.util.Timer;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+
 import io.reactivex.Observable;
 import io.reactivex.ObservableOnSubscribe;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 
 import static android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE;
+import static android.view.View.SYSTEM_UI_FLAG_FULLSCREEN;
 import static android.view.View.SYSTEM_UI_FLAG_HIDE_NAVIGATION;
+import static android.view.View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY;
 
 public class MainActivity extends AppCompatActivity {
     private MyPlayer player;
@@ -37,14 +49,18 @@ public class MainActivity extends AppCompatActivity {
     private String networkPath = "http://gslb.miaopai.com/stream/J7NezBpr68nZtH8chOL9hyzkiRsk0rw6.mp4?vend=miaopai&ssig=6c1263f8cc78ac51aaacce2293dbab87&time_stamp=1556778520561&mpflag=32";
     private SeekBar seekBar;
     private TextView currentTv, totalTv;
+    private String playingKey = "isPlaying";
+    private String rotateKey = "isRotate";
+    private boolean isRotate;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        this.getWindow().addFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS);
+        this.getWindow().addFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_NAVIGATION);
         setContentView(R.layout.activity_main);
         path = this.getExternalCacheDir().getPath() + "/res/wolves.mp4";
         init();
-
         surfaceHolder.addCallback(new SurfaceHolder.Callback() {
             @Override
             public void surfaceCreated(SurfaceHolder holder) {
@@ -53,9 +69,18 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
-                player.prepare(networkPath, vertexCode, fragCode, holder.getSurface());
+                if (savedInstanceState != null) {
+                    isPlaying = savedInstanceState.getBoolean(playingKey);
+                }
+                if (!isPlaying) {
+                    player.prepare(path, vertexCode, fragCode, holder.getSurface());
+                }
                 w = width;
                 h = height;
+                if (isRotate) {
+                    player.ratote(w, h);
+                    player.recover();
+                }
             }
 
             @Override
@@ -67,7 +92,6 @@ public class MainActivity extends AppCompatActivity {
         click();
 
         callback();
-
 
         seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
@@ -90,7 +114,6 @@ public class MainActivity extends AppCompatActivity {
                 player.recover();
             }
         });
-
     }
 
     private void callback() {
@@ -130,19 +153,20 @@ public class MainActivity extends AppCompatActivity {
                         .subscribe(integer -> {
                             seekBar.setProgress(currentTime);
                             currentTv.setText(pts2Time(currentTime));
-                            Log.e(TAG, "onPlaying: "+pts2Time(currentTime) );
                         });
             }
         });
-
     }
 
     private void click() {
         fill.setOnClickListener(v -> {
+            player.pause();
             setRequestedOrientation(SCREEN_ORIENTATION_LANDSCAPE);
-            MainActivity.this.getWindow().getDecorView().setSystemUiVisibility(SYSTEM_UI_FLAG_HIDE_NAVIGATION);
+//            MainActivity.this.getWindow().getDecorView().setSystemUiVisibility(SYSTEM_UI_FLAG_FULLSCREEN);
             ConstraintLayout.LayoutParams lp = new ConstraintLayout.LayoutParams(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT);
             surfaceView.setLayoutParams(lp);
+            isRotate = true;
+            Log.e(TAG, "click: " + "旋转完成");
         });
         start.setOnClickListener(v -> {
             if (isPlaying) {
@@ -153,6 +177,15 @@ public class MainActivity extends AppCompatActivity {
                 player.recover();
             }
             isPlaying = !isPlaying;
+        });
+        surfaceView.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Log.e(TAG, "onClick: surface");
+                MainActivity.this.getWindow().getDecorView().setSystemUiVisibility(SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                        | SYSTEM_UI_FLAG_FULLSCREEN
+                        | SYSTEM_UI_FLAG_HIDE_NAVIGATION);
+            }
         });
     }
 
@@ -187,4 +220,11 @@ public class MainActivity extends AppCompatActivity {
         }
         return time;
     }
+
+    @Override
+    protected void onPause() {
+        player.pause();
+        super.onPause();
+    }
+
 }

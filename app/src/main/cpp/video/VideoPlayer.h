@@ -34,11 +34,15 @@ public:
     void init();
 
 
-    bool pause();
+    void pause();
 
     void play(int w, int h);
 
     void clear();
+
+    void stop();
+
+    void rotate(int, int);
 
 private:
     PlayerStatus *playerStatus;
@@ -61,6 +65,7 @@ private:
     const char *fragCode;
     ANativeWindow *window;
 
+    int w, h;
 
     void getLocation();
 

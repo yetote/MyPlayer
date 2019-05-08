@@ -51,6 +51,8 @@ void VideoPlayer::init() {
 }
 
 void VideoPlayer::drawFrame(AVFrame *frame) {
+    glViewport(0, 0, w, h);
+    LOGE(VideoPlayer_TAG, "line in 55:宽度%d,高度%d", w, h);
     glClear(GL_COLOR_BUFFER_BIT || GL_DEPTH_BUFFER_BIT);
     glUseProgram(glUtils->program);
     bindTexture(frame);
@@ -62,21 +64,23 @@ void VideoPlayer::drawFrame(AVFrame *frame) {
 
     glDrawArrays(GL_TRIANGLES, 0, 6);
     eglSwapBuffers(eglUtils->eglDisplay, eglUtils->eglSurface);
-    av_usleep(20000);
+    av_usleep(25000);
 }
 
 
 void VideoPlayer::play(int w, int h) {
     eglUtils = new EGLUtils(window);
     glUtils = new GLUtils(vertexCode, fragCode);
+    this->w = w;
+    this->h = h;
     init();
     LOGE(VideoPlayer_TAG, "开始播放");
-    glViewport(0, 0, w, h);
     AVPacket *packet = av_packet_alloc();
     AVFrame *pFrame = av_frame_alloc();
     int rst;
     while (!playerStatus->isStop()) {
         if (!playerStatus->isPause()) {
+
 
             isFinish = videoQueue->pop(packet, false);
             LOGE(VideoPlayer_TAG, "line in 80:videoSize=%d", packet->size);
@@ -137,8 +141,9 @@ void VideoPlayer::play(int w, int h) {
             LOGE(VideoPlayer_TAG, "line in 137:暂停中");
             av_usleep(1000);
         }
-
     }
+    av_frame_free(&pFrame);
+    av_packet_free(&packet);
 }
 
 
@@ -161,11 +166,16 @@ VideoPlayer::~VideoPlayer() {
         delete glUtils;
         glUtils = nullptr;
     }
+    delete videoQueue;
+    delete[] uTextureArr;
+    delete[] vertexArr;
+    delete[] textureArr;
+    delete[] colorArr;
+    LOGE(VideoPlayer_TAG, "line in 170:destroyVideo");
 }
 
 void VideoPlayer::getLocation() {
     aPosition = glGetAttribLocation(glUtils->program, "a_Position");
-//    aColor = glGetAttribLocation(glUtils->program, "a_Color");
     aTextureCoordinates = glGetAttribLocation(glUtils->program, "a_TextureCoordinates");
     uTextureY = glGetUniformLocation(glUtils->program, "u_TextureY");
     uTextureU = glGetUniformLocation(glUtils->program, "u_TextureU");
@@ -193,12 +203,22 @@ void VideoPlayer::bindTexture(AVFrame *frame) {
 }
 
 
-bool VideoPlayer::pause() {
+void VideoPlayer::pause() {
 
 }
 
 void VideoPlayer::clear() {
     videoQueue->clear();
+}
+
+void VideoPlayer::stop() {
+    clear();
+}
+
+void VideoPlayer::rotate(int w, int h) {
+    LOGE(VideoPlayer_TAG, "line in 219:宽度=%d,高度=%d", w, h);
+    this->h = h;
+    this->w = w;
 }
 
 

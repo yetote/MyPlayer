@@ -110,4 +110,7 @@ public class MyPlayer {
      * @param seekTime 跳转的时间
      */
     public native void seek(int seekTime);
+
+    public native void stop();
+    public native void ratote(int w,int h);
 }

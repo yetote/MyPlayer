@@ -42,7 +42,8 @@ public:
     void recover();
 
     void seek(int secs);
-
+    void stop();
+    void rotate(int ,int);
     ~Decode();
 
 private:

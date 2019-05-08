@@ -235,6 +235,10 @@ AudioPlayer::~AudioPlayer() {
     av_free(pFrame);
     packet = nullptr;
     pFrame = nullptr;
+    delete latencyTuner;
+    delete[] dataArray;
+    delete audioQueue;
+    LOGE(AudioPlayer_TAG,"line in 241:destroyAudio");
 }
 
 void AudioPlayer::pause() {
@@ -259,4 +263,9 @@ void AudioPlayer::checkSize(int32_t numFrames) {
 
 void AudioPlayer::recover() {
     stream->requestStart();
+}
+
+void AudioPlayer::stop() {
+    stream->requestStop();
+    clear();
 }

@@ -7,6 +7,7 @@
 #include <android/native_window_jni.h>
 #include "util/PlayerStatus.h"
 
+#define NATIVE_TAG "native-lib"
 Decode *decode;
 CallBack *callBack;
 JavaVM *jvm;
@@ -63,4 +64,15 @@ Java_com_example_myplayer_player_MyPlayer_seek(JNIEnv *env, jobject instance, ji
 //    decode->pause();
     decode->seek(seekTime);
 //    decode->recover();
+}extern "C"
+JNIEXPORT void JNICALL
+Java_com_example_myplayer_player_MyPlayer_stop(JNIEnv *env, jobject thiz) {
+    // TODO: implement stop()
+    LOGE(NATIVE_TAG, "line in 70:stop");
+    decode->stop();
+}extern "C"
+JNIEXPORT void JNICALL
+Java_com_example_myplayer_player_MyPlayer_ratote(JNIEnv *env, jobject thiz, jint w, jint h) {
+    // TODO: implement ratote()
+    decode->rotate(w, h);
 }

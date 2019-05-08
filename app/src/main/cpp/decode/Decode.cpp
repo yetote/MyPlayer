@@ -73,14 +73,14 @@ Decode::Decode(PlayerStatus *playerStatus) {
 }
 
 void Decode::play(int w, int h) {
-    if (audioIndex != -1) {
-        std::thread audioPlayThread(&Decode::audioPlay, this);
-        audioPlayThread.detach();
-    }
-//    if (videoIndex != -1) {
-//        std::thread videoPlayThread(&Decode::videoPlay, this, w, h);
-//        videoPlayThread.detach();
+//    if (audioIndex != -1) {
+//        std::thread audioPlayThread(&Decode::audioPlay, this);
+//        audioPlayThread.detach();
 //    }
+    if (videoIndex != -1) {
+        std::thread videoPlayThread(&Decode::videoPlay, this, w, h);
+        videoPlayThread.detach();
+    }
 }
 
 void Decode::audioPlay() {
@@ -97,15 +97,17 @@ void Decode::pause() {
     playerStatus->setPause(true);
 
     audioPlayer->pause();
+    LOGE(Decode_TAG, "line in 100:暂停");
 }
 
 Decode::~Decode() {
-
+    LOGE(Decode_TAG, "line in 104:销毁");
 }
 
 void Decode::recover() {
     playerStatus->setPause(false);
     audioPlayer->recover();
+    LOGE(Decode_TAG, "line in 110:继续播放");
 }
 
 void Decode::seek(int secs) {
@@ -119,6 +121,7 @@ void Decode::seek(int secs) {
         videoPlayer->clear();
         avcodec_flush_buffers(videoPlayer->pVideoCodecCtx);
     }
+    LOGE(Decode_TAG, "line in 124:跳转");
 }
 
 void Decode::findCodec(AVCodecContext **codecCtx, AVCodec *codec, AVStream *stream) {
@@ -154,7 +157,7 @@ void Decode::findCodec(AVCodecContext **codecCtx, AVCodec *codec, AVStream *stre
 //    } else {
 //        codec = avcodec_find_decoder(stream->codecpar->codec_id);
 //    }
-    LOGE(Decode_TAG, "line in 151:name %s", codec->name);
+//    LOGE(Decode_TAG, "line in 151:name %s", codec->name);
 
     rst = avcodec_open2(*codecCtx, codec, null);
     if (rst != 0) {
@@ -168,8 +171,6 @@ void Decode::startDecode() {
     while (!playerStatus->isStop()) {
         if (audioPlayer->audioQueue->queue.size() >= 10 ||
             videoPlayer->videoQueue->queue.size() >= 10) {
-            LOGE(Decode_TAG, "line in 172:队列阻塞 \n,audioBlockSize=%d,\n videoBlockSize=%d",
-                 audioPlayer->audioQueue->queue.size(), videoPlayer->videoQueue->queue.size());
             av_usleep(1000);
             continue;
         }
@@ -178,20 +179,32 @@ void Decode::startDecode() {
         AVPacket videoPacket{0};
         if (av_read_frame(pFmtCtx, packet) >= 0) {
             if (packet->stream_index == audioIndex) {
-                LOGE("startDecode", "line in 169:音频packet%p", packet);
-                av_packet_ref(&audioPacket, packet);
-                audioPlayer->audioQueue->push(&audioPacket);
+//                av_packet_ref(&audioPacket, packet);
+//                audioPlayer->audioQueue->push(&audioPacket);
             } else if (packet->stream_index == videoIndex) {
-                LOGE("startDecode", "line in 169:视频packet%p", packet);
-//                av_packet_ref(&videoPacket, packet);
-//                videoPlayer->videoQueue->push(&videoPacket);
-                LOGE(Decode_TAG, "line in 176:decodevideoIndex=%d", packet->stream_index);
+                av_packet_ref(&videoPacket, packet);
+                videoPlayer->videoQueue->push(&videoPacket);
             }
         }
         av_packet_unref(packet);
     }
 //    av_packet_free(&packet);
 //    av_packet_free(&packet);
+}
+
+void Decode::stop() {
+    playerStatus->setStop(true);
+    if (audioPlayer != nullptr) {
+        audioPlayer->stop();
+    }
+    if (videoPlayer != nullptr) {
+        videoPlayer->stop();
+    }
+    LOGE(Decode_TAG, "line in 203:停止");
+}
+
+void Decode::rotate(int w, int h) {
+    videoPlayer->rotate(w, h);
 }
 
 

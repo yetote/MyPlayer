@@ -27,7 +27,6 @@ public class MediaCodecSupport {
         map.put("audio/mp4a-latm", "aac");
         map.put("video/avc", "h264");
         map.put("video/hevc", "h265");
-
     }
 
 
@@ -45,5 +44,4 @@ public class MediaCodecSupport {
         }
         return false;
     }
-
 }

@@ -3,6 +3,7 @@ package com.example.myplayer;
 import android.app.Application;
 
 import com.didichuxing.doraemonkit.DoraemonKit;
+import com.tencent.bugly.crashreport.CrashReport;
 
 /**
  * @author ether QQ:503779938
@@ -20,5 +21,6 @@ public class MyApplication extends Application {
     public void onCreate() {
         super.onCreate();
         DoraemonKit.install(this);
+        CrashReport.initCrashReport(this,"f00addfb0f",false);
     }
 }

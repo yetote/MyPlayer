@@ -114,8 +114,8 @@ void Decode::seek(int secs) {
     int64_t rel = secs * AV_TIME_BASE;
     avformat_seek_file(pFmtCtx, -1, INT64_MIN, rel, INT64_MAX, 0);
     if (audioPlayer != nullptr) {
-        audioPlayer->clear();
-        avcodec_flush_buffers(audioPlayer->audioCodecCtx);
+//        audioPlayer->clear();
+//        avcodec_flush_buffers(audioPlayer->audioCodecCtx);
     }
     if (videoPlayer != nullptr) {
         videoPlayer->clear();

@@ -21,6 +21,7 @@ import com.example.myplayer.player.MediaCodecSupport;
 import com.example.myplayer.player.MyPlayer;
 import com.example.myplayer.player.gl.utils.TextRecourseReader;
 import com.example.myplayer.player.listener.FFmpegCallBack;
+import com.tencent.bugly.crashreport.CrashReport;
 
 import java.util.Timer;
 import java.util.concurrent.Executors;
@@ -73,7 +74,7 @@ public class MainActivity extends AppCompatActivity {
                     isPlaying = savedInstanceState.getBoolean(playingKey);
                 }
                 if (!isPlaying) {
-                    player.prepare(path, vertexCode, fragCode, holder.getSurface());
+                    player.prepare(networkPath, vertexCode, fragCode, holder.getSurface());
                 }
                 w = width;
                 h = height;

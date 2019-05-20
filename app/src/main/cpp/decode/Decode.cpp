@@ -96,7 +96,7 @@ void Decode::videoPlay(int w, int h) {
 void Decode::pause() {
     playerStatus->setPause(true);
 
-    audioPlayer->pause();
+//    audioPlayer->pause();
     LOGE(Decode_TAG, "line in 100:暂停");
 }
 
@@ -106,7 +106,7 @@ Decode::~Decode() {
 
 void Decode::recover() {
     playerStatus->setPause(false);
-    audioPlayer->recover();
+//    audioPlayer->recover();
     LOGE(Decode_TAG, "line in 110:继续播放");
 }
 

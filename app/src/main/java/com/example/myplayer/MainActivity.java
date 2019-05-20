@@ -1,19 +1,18 @@
 package com.example.myplayer;
 
+import android.content.Intent;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Message;
-import android.os.PersistableBundle;
 import android.util.Log;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
 import android.view.WindowManager;
+import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.SeekBar;
 import android.widget.TextView;
+import android.widget.Toast;
 
-import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.constraintlayout.widget.ConstraintLayout;
 
@@ -21,12 +20,6 @@ import com.example.myplayer.player.MediaCodecSupport;
 import com.example.myplayer.player.MyPlayer;
 import com.example.myplayer.player.gl.utils.TextRecourseReader;
 import com.example.myplayer.player.listener.FFmpegCallBack;
-import com.tencent.bugly.crashreport.CrashReport;
-
-import java.util.Timer;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
 
 import io.reactivex.Observable;
 import io.reactivex.ObservableOnSubscribe;
@@ -53,6 +46,7 @@ public class MainActivity extends AppCompatActivity {
     private String playingKey = "isPlaying";
     private String rotateKey = "isRotate";
     private boolean isRotate;
+    private Button recordBtn;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -60,7 +54,7 @@ public class MainActivity extends AppCompatActivity {
         this.getWindow().addFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS);
         this.getWindow().addFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_NAVIGATION);
         setContentView(R.layout.activity_main);
-        path = this.getExternalCacheDir().getPath() + "/res/wolves.mp4";
+        path = this.getExternalCacheDir().getPath() + "/res/output.h264";
         init();
         surfaceHolder.addCallback(new SurfaceHolder.Callback() {
             @Override
@@ -74,11 +68,12 @@ public class MainActivity extends AppCompatActivity {
                     isPlaying = savedInstanceState.getBoolean(playingKey);
                 }
                 if (!isPlaying) {
-                    player.prepare(networkPath, vertexCode, fragCode, holder.getSurface());
+                    player.prepare(path, vertexCode, fragCode, holder.getSurface());
                 }
                 w = width;
                 h = height;
                 if (isRotate) {
+                    Toast.makeText(MainActivity.this, "宽度" + w + "高度" + h, Toast.LENGTH_SHORT).show();
                     player.ratote(w, h);
                     player.recover();
                 }
@@ -163,7 +158,6 @@ public class MainActivity extends AppCompatActivity {
         fill.setOnClickListener(v -> {
             player.pause();
             setRequestedOrientation(SCREEN_ORIENTATION_LANDSCAPE);
-//            MainActivity.this.getWindow().getDecorView().setSystemUiVisibility(SYSTEM_UI_FLAG_FULLSCREEN);
             ConstraintLayout.LayoutParams lp = new ConstraintLayout.LayoutParams(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT);
             surfaceView.setLayoutParams(lp);
             isRotate = true;
@@ -179,15 +173,13 @@ public class MainActivity extends AppCompatActivity {
             }
             isPlaying = !isPlaying;
         });
-        surfaceView.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Log.e(TAG, "onClick: surface");
-                MainActivity.this.getWindow().getDecorView().setSystemUiVisibility(SYSTEM_UI_FLAG_IMMERSIVE_STICKY
-                        | SYSTEM_UI_FLAG_FULLSCREEN
-                        | SYSTEM_UI_FLAG_HIDE_NAVIGATION);
-            }
+        surfaceView.setOnClickListener(v -> {
+            Log.e(TAG, "onClick: surface");
+            MainActivity.this.getWindow().getDecorView().setSystemUiVisibility(SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                    | SYSTEM_UI_FLAG_FULLSCREEN
+                    | SYSTEM_UI_FLAG_HIDE_NAVIGATION);
         });
+        recordBtn.setOnClickListener(v -> startActivity(new Intent().setClass(MainActivity.this, RecordActivity.class)));
     }
 
     private void init() {
@@ -202,6 +194,7 @@ public class MainActivity extends AppCompatActivity {
         seekBar = findViewById(R.id.seekBar);
         currentTv = findViewById(R.id.currentTimeTv);
         totalTv = findViewById(R.id.totalTimeTv);
+        recordBtn = findViewById(R.id.record);
     }
 
     private String pts2Time(int ptsTime) {
@@ -227,5 +220,4 @@ public class MainActivity extends AppCompatActivity {
         player.pause();
         super.onPause();
     }
-
 }

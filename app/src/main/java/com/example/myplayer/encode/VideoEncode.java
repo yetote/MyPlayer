@@ -11,4 +11,5 @@ package com.example.myplayer.encode;
  * @class describe
  */
 public class VideoEncode {
+
 }

@@ -16,6 +16,7 @@ import android.os.Handler;
 import android.os.HandlerThread;
 import android.util.Log;
 import android.util.Size;
+import android.util.SparseIntArray;
 import android.view.Surface;
 import android.view.TextureView;
 import android.widget.Toast;
@@ -23,7 +24,9 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.core.content.PermissionChecker;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 import static androidx.core.content.PermissionChecker.checkSelfPermission;
 
@@ -55,6 +58,14 @@ public class MyCamera {
     private Context context;
     private static final String TAG = "MyCamera";
     private String[] cameraIds;
+    private static final SparseIntArray ORIENTATION = new SparseIntArray();
+
+    static {
+        ORIENTATION.append(Surface.ROTATION_0, 90);
+        ORIENTATION.append(Surface.ROTATION_90, 0);
+        ORIENTATION.append(Surface.ROTATION_180, 270);
+        ORIENTATION.append(Surface.ROTATION_270, 180);
+    }
 
 
     public MyCamera(@NonNull Context context, int width, int height) {
@@ -67,21 +78,21 @@ public class MyCamera {
         backgroundHandler = new android.os.Handler(backgroundThread.getLooper());
     }
 
-    public int openCamera() {
+    public boolean openCamera() {
         if (width == 0 || height == 0) {
             Log.e(TAG, "openCamera: 获取的宽度和高度不正确");
-            return -1;
+            return false;
         }
         cameraManager = (CameraManager) context.getSystemService(Context.CAMERA_SERVICE);
         if (cameraManager == null) {
             Log.e(TAG, "openCamera: 我发获取camera服务");
-            return -1;
+            return false;
         }
         getCameraInfo();
 
         if (backCameraId == -1 && frontCameraId == -1) {
             Log.e(TAG, "openCamera: 未在该设备上找到相机，请检查");
-            return -1;
+            return false;
         }
         int openCameraId = -1;
         if (backCameraId != -1) {
@@ -90,14 +101,14 @@ public class MyCamera {
             openCameraId = frontCameraId;
         } else {
             Log.e(TAG, "openCamera: 未找到相机");
-            return -1;
+            return false;
         }
         if (checkSelfPermission(context, Manifest.permission.CAMERA) != PermissionChecker.PERMISSION_GRANTED) {
             Toast.makeText(context, "请开启相机权限", Toast.LENGTH_SHORT).show();
-            return -1;
+            return false;
         }
         try {
-            cameraManager.openCamera(cameraIds[backCameraId], new CameraDevice.StateCallback() {
+            cameraManager.openCamera(cameraIds[openCameraId], new CameraDevice.StateCallback() {
                 @Override
                 public void onOpened(@NonNull CameraDevice camera) {
                     cameraDevice = camera;
@@ -120,16 +131,71 @@ public class MyCamera {
         } catch (CameraAccessException e) {
             e.printStackTrace();
         }
-        return 0;
+        return true;
     }
 
     public void openPreview(Surface... surfaces) {
+        List<Surface> surfaceList = new ArrayList<>();
         try {
             previewCaptureBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
             for (int i = 0; i < surfaces.length; i++) {
                 previewCaptureBuilder.addTarget(surfaces[i]);
+                surfaceList.add(surfaces[i]);
             }
-            cameraDevice.
+            cameraDevice.createCaptureSession(surfaceList, new CameraCaptureSession.StateCallback() {
+                @Override
+                public void onConfigured(@NonNull CameraCaptureSession session) {
+                    captureSession = session;
+                    Toast.makeText(context, "开始录制", Toast.LENGTH_SHORT).show();
+                    previewCaptureBuilder.set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_AUTO);
+                    CaptureRequest captureRequest = previewCaptureBuilder.build();
+                    try {
+                        captureSession.setRepeatingRequest(captureRequest, null, backgroundHandler);
+                    } catch (CameraAccessException e) {
+                        e.printStackTrace();
+                    }
+
+                }
+
+                @Override
+                public void onConfigureFailed(@NonNull CameraCaptureSession session) {
+
+                }
+            }, backgroundHandler);
+        } catch (CameraAccessException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void openRecord(int rotation, Surface... surfaces) {
+        List<Surface> surfaceList = new ArrayList<>();
+        if (captureSession != null) {
+            captureSession.close();
+        }
+        try {
+            recordCaptureBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_RECORD);
+            for (int i = 0; i < surfaces.length; i++) {
+                recordCaptureBuilder.addTarget(surfaces[i]);
+                surfaceList.add(surfaces[i]);
+            }
+            recordCaptureBuilder.set(CaptureRequest.JPEG_ORIENTATION, ORIENTATION.get(rotation));
+            cameraDevice.createCaptureSession(surfaceList, new CameraCaptureSession.StateCallback() {
+                @Override
+                public void onConfigured(@NonNull CameraCaptureSession session) {
+                    captureSession = session;
+                    recordCaptureBuilder.set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_AUTO);
+                    try {
+                        captureSession.setRepeatingRequest(recordCaptureBuilder.build(), null, backgroundHandler);
+                    } catch (CameraAccessException e) {
+                        e.printStackTrace();
+                    }
+                }
+
+                @Override
+                public void onConfigureFailed(@NonNull CameraCaptureSession session) {
+
+                }
+            }, backgroundHandler);
         } catch (CameraAccessException e) {
             e.printStackTrace();
         }
@@ -249,4 +315,13 @@ public class MyCamera {
         Log.e(TAG, "getBestSize: 参数不合法");
         return null;
     }
+
+
+    public void closeRecord(Surface... surfaces) {
+        if (captureSession != null) {
+            captureSession.close();
+        }
+        openPreview(surfaces);
+    }
+
 }

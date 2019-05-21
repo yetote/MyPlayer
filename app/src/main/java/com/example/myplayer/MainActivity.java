@@ -126,7 +126,7 @@ public class MainActivity extends AppCompatActivity {
                             .subscribe(integer -> {
                                 seekBar.setMax(totalTime);
                                 totalTv.setText(pts2Time(totalTime));
-                                player.play(w, h);
+//                                player.play(w, h);
                                 isPlaying = true;
                             });
                 }

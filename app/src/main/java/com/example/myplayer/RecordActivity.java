@@ -14,7 +14,6 @@ import android.util.Log;
 import android.view.Display;
 import android.view.Surface;
 import android.view.TextureView;
-import android.view.View;
 import android.widget.Button;
 import android.widget.Toast;
 
@@ -24,6 +23,12 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.PermissionChecker;
 
 import com.example.myplayer.encode.MyCamera;
+import com.example.myplayer.encode.VideoEncode;
+
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingDeque;
 
 public class RecordActivity extends AppCompatActivity {
     private int width, height;
@@ -38,6 +43,12 @@ public class RecordActivity extends AppCompatActivity {
     private static final String TAG = "RecordActivity";
     private HandlerThread backgroundThread;
     private Handler backgroundHandler;
+    public static BlockingQueue<byte[]> blockingQueue = new LinkedBlockingDeque<>();
+    private VideoEncode videoEncode;
+    private boolean isRecording;
+    private Thread encodeThread;
+    private ByteBuffer dataBuffer;
+    private String path;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -55,19 +66,25 @@ public class RecordActivity extends AppCompatActivity {
         backgroundThread = new HandlerThread("ImageBackgroundThread");
         backgroundThread.start();
         backgroundHandler = new android.os.Handler(backgroundThread.getLooper());
+        path = getExternalCacheDir().getPath() + "/res/test.h264";
 
         if (PermissionChecker.checkSelfPermission(this, Manifest.permission.CAMERA) != PermissionChecker.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, PERMISSION_CAMERA);
         } else {
             isCameraOpen = camera.openCamera();
+            bestWidth = camera.getBestSize(MyCamera.BACK_CAMERA)[0];
+            bestHeight = camera.getBestSize(MyCamera.BACK_CAMERA)[1];
         }
+        videoEncode = new VideoEncode(bestWidth, bestHeight, path);
+        dataBuffer = ByteBuffer.allocate(bestHeight * bestWidth * 3 / 2).order(ByteOrder.nativeOrder());
+
+
         textureView.setSurfaceTextureListener(new TextureView.SurfaceTextureListener() {
             @Override
             public void onSurfaceTextureAvailable(SurfaceTexture surfaceTexture, int width, int height) {
                 if (isCameraOpen) {
                     // TODO: 2019/5/21 surface需要release
-                    bestWidth = camera.getBestSize(MyCamera.BACK_CAMERA)[0];
-                    bestHeight = camera.getBestSize(MyCamera.BACK_CAMERA)[1];
+
                     imageReader = ImageReader.newInstance(bestWidth, bestHeight, ImageFormat.YUV_420_888, 1);
                     surface = new Surface(surfaceTexture);
                     surfaceTexture.setDefaultBufferSize(bestWidth, bestHeight);
@@ -96,20 +113,84 @@ public class RecordActivity extends AppCompatActivity {
 
         startBtn.setOnClickListener(v -> {
             if (isCameraOpen) {
-                imageReader.setOnImageAvailableListener(new ImageReader.OnImageAvailableListener() {
-                    @Override
-                    public void onImageAvailable(ImageReader reader) {
-                      Image img= reader.acquireNextImage();
+                if (!isRecording) {
+                    isRecording = true;
+                    encodeThread.start();
+                    imageReader.setOnImageAvailableListener(reader -> {
+                        long now = System.currentTimeMillis();
+                        Image img = reader.acquireNextImage();
                         Log.e(TAG, "onImageAvailable: imageReader接受图片");
-//                        reader.close();
+                        dataEnqueue(img);
                         img.close();
-                    }
-                }, backgroundHandler);
+                        Log.e(TAG, "onImageAvailable: 处理图片共耗时" + (System.currentTimeMillis() - now));
+                    }, backgroundHandler);
 
-                camera.openPreview(surface, imageReader.getSurface());
+                    camera.openPreview(surface, imageReader.getSurface());
+                } else {
+                    Log.e(TAG, "onCreate: stop");
+                    camera.closeRecord(surface);
+                    isRecording = false;
+                }
             }
         });
+        encodeThread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                for (; ; ) {
+                    Log.e(TAG, "run: 是否完成" + !isRecording + blockingQueue.isEmpty());
+                    if (!isRecording && blockingQueue.isEmpty()) {
+                        Log.e(TAG, "run: 编码完成");
+                        break;
+                    }
+                    Log.e(TAG, "run: 开始编码");
+                    dataDequeue(dataBuffer);
+                    Log.e(TAG, "run: 出队数据" + dataBuffer.get(11890));
+//                    dataBuffer.position(0);
+                    if (!isRecording && blockingQueue.isEmpty()) {
+                        videoEncode.encode(dataBuffer, true);
+                    } else {
+                        videoEncode.encode(dataBuffer, false);
+                    }
+                }
+            }
 
+        });
+    }
+
+    private void dataEnqueue(Image img) {
+        long now = System.currentTimeMillis();
+        int w = img.getWidth();
+        int h = img.getHeight();
+        byte[] yBuffer = new byte[w * h];
+        byte[] uvBuffer = new byte[w * h / 2];
+        byte[] dataBuffer = new byte[w * h * 3 / 2];
+        img.getPlanes()[0].getBuffer().get(yBuffer);
+        img.getPlanes()[2].getBuffer().get(uvBuffer, 0, w * h / 2 - 1);
+        uvBuffer[w * h / 2 - 1] = img.getPlanes()[1].getBuffer().get(w * h / 2 - 2);
+        System.arraycopy(yBuffer, 0, dataBuffer, 0, yBuffer.length);
+        System.arraycopy(uvBuffer, 0, dataBuffer, yBuffer.length - 1, uvBuffer.length);
+        try {
+            blockingQueue.put(dataBuffer);
+            Log.e(TAG, "dataEnqueue: 入队数据" + dataBuffer[11890]);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        Log.e(TAG, "dataEnqueue: 耗时" + (System.currentTimeMillis() - now));
+    }
+
+    private void dataDequeue(ByteBuffer dataBuffer) {
+        if (dataBuffer.position() != 0) {
+            dataBuffer.position(0);
+        }
+        try {
+            byte[] data = blockingQueue.take();
+            Log.e(TAG, "dataDequeue: dataSize" + data.length);
+            Log.e(TAG, "dataDequeue: bufferSize" + dataBuffer.limit());
+            dataBuffer.put(data);
+            Log.e(TAG, "dataDequeue: 出队");
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
@@ -119,6 +200,8 @@ public class RecordActivity extends AppCompatActivity {
             case PERMISSION_CAMERA:
                 if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                     isCameraOpen = camera.openCamera();
+                    bestWidth = camera.getBestSize(MyCamera.BACK_CAMERA)[0];
+                    bestHeight = camera.getBestSize(MyCamera.BACK_CAMERA)[1];
                 }
                 break;
             default:

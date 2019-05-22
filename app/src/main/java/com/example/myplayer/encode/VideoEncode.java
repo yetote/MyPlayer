@@ -30,16 +30,20 @@ public class VideoEncode {
     private MediaCodec mediaCodec;
     private MediaFormat mediaFormat;
     private static final String TAG = "VideoEncode";
-    byte[] pts;
+    byte[] pps;
+    private long frameCount = 0;
+    private int bitrate;
 
     public VideoEncode(int w, int h, String path) {
         writeFile = new WriteFile(path);
         mediaFormat = MediaFormat.createVideoFormat(MIMETYPE_VIDEO_AVC, w, h);
-        mediaFormat.setInteger(MediaFormat.KEY_BIT_RATE, w * h * 30 * 3);
+        bitrate = w * h * 3 * 3;
+        mediaFormat.setInteger(MediaFormat.KEY_BIT_RATE, bitrate);
         mediaFormat.setInteger(MediaFormat.KEY_BITRATE_MODE, BITRATE_MODE_VBR);
         mediaFormat.setInteger(MediaFormat.KEY_FRAME_RATE, 30);
         mediaFormat.setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420Flexible);
         mediaFormat.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 1);
+//        mediaFormat.setInteger(MediaFormat.KEY_LEVEL);
         try {
             mediaCodec = MediaCodec.createEncoderByType(MIMETYPE_VIDEO_AVC);
         } catch (IOException e) {
@@ -47,11 +51,12 @@ public class VideoEncode {
         }
         mediaCodec.configure(mediaFormat, null, null, CONFIGURE_FLAG_ENCODE);
         mediaCodec.start();
-        pts = null;
+        pps = null;
     }
 
 
     public void encode(ByteBuffer dataBuffer, boolean isFinish) {
+        long pts = frameCount++ * 1000000 / bitrate;
         dataBuffer.flip();
         int inputBufferIndex = mediaCodec.dequeueInputBuffer(-1);
         if (inputBufferIndex == -1) {
@@ -71,7 +76,7 @@ public class VideoEncode {
             Log.e(TAG, "run: 最后一帧");
             flag = BUFFER_FLAG_END_OF_STREAM;
         }
-        mediaCodec.queueInputBuffer(inputBufferIndex, 0, inputBuffer.limit(), System.currentTimeMillis(), flag);
+        mediaCodec.queueInputBuffer(inputBufferIndex, 0, inputBuffer.limit(), pts, flag);
 
         MediaCodec.BufferInfo bufferInfo = new MediaCodec.BufferInfo();
         int outBufferIndex = mediaCodec.dequeueOutputBuffer(bufferInfo, 10000);
@@ -81,19 +86,19 @@ public class VideoEncode {
                 Log.e(TAG, "encode: 未找到编码后容器");
                 break;
             }
-            if (pts == null) {
+            if (pps == null) {
                 if (bufferInfo.flags == 2) {
                     Log.e(TAG, "run: 第一帧");
-                    pts = new byte[bufferInfo.size];
+                    pps = new byte[bufferInfo.size];
                     Log.e(TAG, "run:第一帧长度 " + outputBuffer.limit());
                     Log.e(TAG, "run:第一帧falsg " + bufferInfo.flags);
-                    Log.e(TAG, "run: ptsSize" + pts.length);
-                    outputBuffer.get(pts);
+                    Log.e(TAG, "run: ptsSize" + pps.length);
+                    outputBuffer.get(pps);
                 }
             }
             if (bufferInfo.flags == 1) {
                 Log.e(TAG, "run: 关键帧");
-                writeFile.write(pts);
+                writeFile.write(pps);
             } else {
                 outputBuffer.position(bufferInfo.offset);
                 outputBuffer.limit(bufferInfo.offset + bufferInfo.size);

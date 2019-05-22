@@ -1,6 +1,8 @@
 package com.example.myplayer;
 
 import android.Manifest;
+import android.animation.ObjectAnimator;
+import android.animation.ValueAnimator;
 import android.content.pm.PackageManager;
 import android.graphics.ImageFormat;
 import android.graphics.Point;
@@ -14,6 +16,10 @@ import android.util.Log;
 import android.view.Display;
 import android.view.Surface;
 import android.view.TextureView;
+import android.view.animation.AccelerateDecelerateInterpolator;
+import android.view.animation.AlphaAnimation;
+import android.view.animation.Interpolator;
+import android.view.animation.LinearInterpolator;
 import android.widget.Button;
 import android.widget.Toast;
 
@@ -23,12 +29,15 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.PermissionChecker;
 
 import com.example.myplayer.encode.MyCamera;
+import com.example.myplayer.encode.VideoData;
 import com.example.myplayer.encode.VideoEncode;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingDeque;
+
+import static android.animation.ValueAnimator.INFINITE;
 
 public class RecordActivity extends AppCompatActivity {
     private int width, height;
@@ -49,6 +58,7 @@ public class RecordActivity extends AppCompatActivity {
     private Thread encodeThread;
     private ByteBuffer dataBuffer;
     private String path;
+    private NotifyLightView notifyLightView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -67,6 +77,12 @@ public class RecordActivity extends AppCompatActivity {
         backgroundThread.start();
         backgroundHandler = new android.os.Handler(backgroundThread.getLooper());
         path = getExternalCacheDir().getPath() + "/res/test.h264";
+        notifyLightView = findViewById(R.id.record_notifyLightView);
+        ObjectAnimator oa = ObjectAnimator.ofFloat(notifyLightView, "alpha", 1, 0);
+        oa.setDuration(2000);
+        oa.setInterpolator(new AccelerateDecelerateInterpolator());
+        oa.setRepeatMode(ValueAnimator.REVERSE);
+        oa.setRepeatCount(INFINITE);
 
         if (PermissionChecker.checkSelfPermission(this, Manifest.permission.CAMERA) != PermissionChecker.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, PERMISSION_CAMERA);
@@ -78,7 +94,6 @@ public class RecordActivity extends AppCompatActivity {
         videoEncode = new VideoEncode(bestWidth, bestHeight, path);
         dataBuffer = ByteBuffer.allocate(bestHeight * bestWidth * 3 / 2).order(ByteOrder.nativeOrder());
 
-
         textureView.setSurfaceTextureListener(new TextureView.SurfaceTextureListener() {
             @Override
             public void onSurfaceTextureAvailable(SurfaceTexture surfaceTexture, int width, int height) {
@@ -89,7 +104,6 @@ public class RecordActivity extends AppCompatActivity {
                     surface = new Surface(surfaceTexture);
                     surfaceTexture.setDefaultBufferSize(bestWidth, bestHeight);
                     camera.openPreview(surface);
-
                 } else {
                     Toast.makeText(RecordActivity.this, "相机未打开，无法开启预览", Toast.LENGTH_SHORT).show();
                 }
@@ -124,12 +138,13 @@ public class RecordActivity extends AppCompatActivity {
                         img.close();
                         Log.e(TAG, "onImageAvailable: 处理图片共耗时" + (System.currentTimeMillis() - now));
                     }, backgroundHandler);
-
                     camera.openPreview(surface, imageReader.getSurface());
+                    oa.start();
                 } else {
                     Log.e(TAG, "onCreate: stop");
                     camera.closeRecord(surface);
                     isRecording = false;
+                    oa.cancel();
                 }
             }
         });

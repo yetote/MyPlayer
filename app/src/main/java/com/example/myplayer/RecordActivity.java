@@ -38,6 +38,9 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingDeque;
 
 import static android.animation.ValueAnimator.INFINITE;
+import static android.view.View.SYSTEM_UI_FLAG_FULLSCREEN;
+import static android.view.View.SYSTEM_UI_FLAG_HIDE_NAVIGATION;
+import static android.view.View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY;
 
 public class RecordActivity extends AppCompatActivity {
     private int width, height;
@@ -59,10 +62,15 @@ public class RecordActivity extends AppCompatActivity {
     private ByteBuffer dataBuffer;
     private String path;
     private NotifyLightView notifyLightView;
+    private int recordWith = 1280, recordHeight = 640;
+    private SurfaceTexture surfaceTexture;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        this.getWindow().getDecorView().setSystemUiVisibility(SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                | SYSTEM_UI_FLAG_FULLSCREEN
+                | SYSTEM_UI_FLAG_HIDE_NAVIGATION);
         setContentView(R.layout.activity_record);
         Display dm = this.getWindowManager().getDefaultDisplay();
         Point point = new Point();
@@ -91,16 +99,17 @@ public class RecordActivity extends AppCompatActivity {
             bestWidth = camera.getBestSize(MyCamera.BACK_CAMERA)[0];
             bestHeight = camera.getBestSize(MyCamera.BACK_CAMERA)[1];
         }
-        videoEncode = new VideoEncode(bestWidth, bestHeight, path);
+        videoEncode = new VideoEncode(recordWith, recordHeight, path);
         dataBuffer = ByteBuffer.allocate(bestHeight * bestWidth * 3 / 2).order(ByteOrder.nativeOrder());
 
         textureView.setSurfaceTextureListener(new TextureView.SurfaceTextureListener() {
             @Override
-            public void onSurfaceTextureAvailable(SurfaceTexture surfaceTexture, int width, int height) {
+            public void onSurfaceTextureAvailable(SurfaceTexture st, int width, int height) {
                 if (isCameraOpen) {
                     // TODO: 2019/5/21 surface需要release
 
-                    imageReader = ImageReader.newInstance(bestWidth, bestHeight, ImageFormat.YUV_420_888, 1);
+                    imageReader = ImageReader.newInstance(recordWith, recordHeight, ImageFormat.YUV_420_888, 1);
+                    surfaceTexture = st;
                     surface = new Surface(surfaceTexture);
                     surfaceTexture.setDefaultBufferSize(bestWidth, bestHeight);
                     camera.openPreview(surface);
@@ -138,7 +147,8 @@ public class RecordActivity extends AppCompatActivity {
                         img.close();
                         Log.e(TAG, "onImageAvailable: 处理图片共耗时" + (System.currentTimeMillis() - now));
                     }, backgroundHandler);
-                    camera.openPreview(surface, imageReader.getSurface());
+                    surfaceTexture.setDefaultBufferSize(bestWidth, bestHeight);
+                    camera.openRecord(getWindowManager().getDefaultDisplay().getRotation(), new Surface(surfaceTexture), imageReader.getSurface());
                     oa.start();
                 } else {
                     Log.e(TAG, "onCreate: stop");
@@ -176,17 +186,17 @@ public class RecordActivity extends AppCompatActivity {
         long now = System.currentTimeMillis();
         int w = img.getWidth();
         int h = img.getHeight();
+        Log.e(TAG, "dataEnqueue: 图片宽高" + w + h);
         byte[] yBuffer = new byte[w * h];
         byte[] uvBuffer = new byte[w * h / 2];
         byte[] dataBuffer = new byte[w * h * 3 / 2];
         img.getPlanes()[0].getBuffer().get(yBuffer);
-        img.getPlanes()[2].getBuffer().get(uvBuffer, 0, w * h / 2 - 1);
-        uvBuffer[w * h / 2 - 1] = img.getPlanes()[1].getBuffer().get(w * h / 2 - 2);
+        img.getPlanes()[1].getBuffer().get(uvBuffer, 0, w * h / 2 - 1);
+        uvBuffer[w * h / 2 - 1] = img.getPlanes()[2].getBuffer().get(w * h / 2 - 2);
         System.arraycopy(yBuffer, 0, dataBuffer, 0, yBuffer.length);
-        System.arraycopy(uvBuffer, 0, dataBuffer, yBuffer.length - 1, uvBuffer.length);
+        System.arraycopy(uvBuffer, 0, dataBuffer, yBuffer.length, uvBuffer.length);
         try {
             blockingQueue.put(dataBuffer);
-            Log.e(TAG, "dataEnqueue: 入队数据" + dataBuffer[11890]);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }

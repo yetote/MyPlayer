@@ -33,7 +33,6 @@ public class WriteFile {
             e.printStackTrace();
         }
     }
-
     public boolean write(ByteBuffer byteBuffer) {
         Log.e(TAG, "write: " + byteBuffer.limit());
         if (fileChannel == null) {

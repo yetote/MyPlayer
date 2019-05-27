@@ -37,7 +37,7 @@ public class VideoEncode {
     public VideoEncode(int w, int h, String path) {
         writeFile = new WriteFile(path);
         mediaFormat = MediaFormat.createVideoFormat(MIMETYPE_VIDEO_AVC, w, h);
-        bitrate = w * h * 3 * 3;
+        bitrate = w * h * 30 * 3;
         mediaFormat.setInteger(MediaFormat.KEY_BIT_RATE, bitrate);
         mediaFormat.setInteger(MediaFormat.KEY_BITRATE_MODE, BITRATE_MODE_VBR);
         mediaFormat.setInteger(MediaFormat.KEY_FRAME_RATE, 30);

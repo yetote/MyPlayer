@@ -227,7 +227,7 @@ public class MyCamera {
                 StreamConfigurationMap configurationMap = frontCameraCharacteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
                 Size[] bestPreviewSizes = configurationMap.getOutputSizes(ImageFormat.YUV_420_888);
                 Log.e(TAG, "getCameraInfo: frontCamera" + Arrays.toString(bestPreviewSizes));
-                chooseBestSize(FRONT_CAMERA, bestPreviewSizes);
+//                chooseBestSize(FRONT_CAMERA, bestPreviewSizes);
             }
             if (backCameraId != -1) {
                 StreamConfigurationMap configurationMap = backCameraCharacteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
@@ -242,11 +242,14 @@ public class MyCamera {
     }
 
     private void chooseBestSize(int cameraType, Size[] bestPreviewSizes) {
-        int diff = Integer.MAX_VALUE;
+        float diff = Float.MAX_VALUE;
         int bestWidth = 0, bestHeight = 0;
+
+        float bestRatio =  (float)height/(float)width;
+
         for (int j = 0; j < bestPreviewSizes.length - 1; j++) {
 
-            int newDiff = Math.abs(width - bestPreviewSizes[j].getHeight()) + Math.abs(height - bestPreviewSizes[j].getWidth());
+            float newDiff = Math.abs(bestPreviewSizes[j].getWidth() / bestPreviewSizes[j].getHeight() - bestRatio);
             if (newDiff == 0) {
                 bestWidth = bestPreviewSizes[j].getWidth();
                 bestHeight = bestPreviewSizes[j].getHeight();
@@ -263,7 +266,7 @@ public class MyCamera {
             Log.e(TAG, "chooseBestSize: 最佳分辨率为0");
             return;
         }
-
+        Log.e(TAG, "chooseBestSize: bestPreviewSize" + bestWidth + "\n" + bestHeight);
         if (cameraType == FRONT_CAMERA) {
             frontBestWidth = bestWidth;
             frontBestHeight = bestHeight;

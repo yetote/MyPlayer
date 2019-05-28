@@ -12,35 +12,38 @@ import android.hardware.camera2.CameraManager;
 import android.hardware.camera2.CameraMetadata;
 import android.hardware.camera2.CaptureRequest;
 import android.hardware.camera2.params.StreamConfigurationMap;
+import android.media.Image;
+import android.media.ImageReader;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.util.Log;
 import android.util.Size;
 import android.util.SparseIntArray;
 import android.view.Surface;
-import android.view.TextureView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.core.app.ActivityCompat;
 import androidx.core.content.PermissionChecker;
 
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 
 import static androidx.core.content.PermissionChecker.checkSelfPermission;
 
 /**
- * @author ether QQ:503779938
+ * @author yetote QQ:503779938
  * @name MyPlayer
  * @class name：com.example.myplayer.encode
  * @class describe
- * @time 2019/5/20 15:50
+ * @time 2019/5/28 13:53
  * @change
  * @chang time
  * @class describe
  */
-public class MyCamera {
+public class MyCamera2 {
+    private static final String TAG = "MyCamera";
+    private Context context;
+    private String path;
     private Handler backgroundHandler;
     private HandlerThread backgroundThread;
     private int width, height;
@@ -49,16 +52,21 @@ public class MyCamera {
     private CameraManager cameraManager;
     public static final int FRONT_CAMERA = 0;
     public static final int BACK_CAMERA = 1;
-
+    private NewVideoEncode videoEncode;
     private int backCameraId, frontCameraId;
     private CameraDevice cameraDevice;
     private CameraCharacteristics backCameraCharacteristics, frontCameraCharacteristics;
     private CameraCaptureSession captureSession;
     private CaptureRequest.Builder previewCaptureBuilder, recordCaptureBuilder;
-    private Context context;
-    private static final String TAG = "MyCamera";
     private String[] cameraIds;
     private static final SparseIntArray ORIENTATION = new SparseIntArray();
+    private ImageReader imageReader;
+    private ImageReader.OnImageAvailableListener imageAvailableListener = reader -> {
+        Image image = reader.acquireLatestImage();
+        videoEncode.encodeData(image);
+        Log.e(TAG, "录像机:接收到图片 ");
+        image.close();
+    };
 
     static {
         ORIENTATION.append(Surface.ROTATION_0, 90);
@@ -67,18 +75,22 @@ public class MyCamera {
         ORIENTATION.append(Surface.ROTATION_270, 180);
     }
 
-
-    public MyCamera(@NonNull Context context, int width, int height) {
+    public MyCamera2(Context context, String path, int w, int h) {
+        this.width = w;
+        this.height = h;
         this.context = context;
-        this.width = width;
-        this.height = height;
+        this.path = path;
         backCameraId = frontCameraId = -1;
         backgroundThread = new HandlerThread("CameraBackground");
         backgroundThread.start();
         backgroundHandler = new android.os.Handler(backgroundThread.getLooper());
+        imageReader = ImageReader.newInstance(1280, 640, ImageFormat.YUV_420_888, 1);
+        imageReader.setOnImageAvailableListener(imageAvailableListener, backgroundHandler);
+        videoEncode = new NewVideoEncode(1280, 640, path);
+
     }
 
-    public boolean openCamera() {
+    public boolean initCamera() {
         if (width == 0 || height == 0) {
             Log.e(TAG, "openCamera: 获取的宽度和高度不正确");
             return false;
@@ -94,21 +106,16 @@ public class MyCamera {
             Log.e(TAG, "openCamera: 未在该设备上找到相机，请检查");
             return false;
         }
-        int openCameraId = -1;
-        if (backCameraId != -1) {
-            openCameraId = backCameraId;
-        } else if (frontCameraId != -1) {
-            openCameraId = frontCameraId;
-        } else {
-            Log.e(TAG, "openCamera: 未找到相机");
-            return false;
-        }
-        if (checkSelfPermission(context, Manifest.permission.CAMERA) != PermissionChecker.PERMISSION_GRANTED) {
-            Toast.makeText(context, "请开启相机权限", Toast.LENGTH_SHORT).show();
-            return false;
+        return true;
+    }
+
+    public void openCamera(int cameraId) {
+        if (ActivityCompat.checkSelfPermission(context, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+            Log.e(TAG, "openCamera: 请打开相机权限");
+            return;
         }
         try {
-            cameraManager.openCamera(cameraIds[openCameraId], new CameraDevice.StateCallback() {
+            cameraManager.openCamera(cameraIds[cameraId], new CameraDevice.StateCallback() {
                 @Override
                 public void onOpened(@NonNull CameraDevice camera) {
                     cameraDevice = camera;
@@ -131,18 +138,13 @@ public class MyCamera {
         } catch (CameraAccessException e) {
             e.printStackTrace();
         }
-        return true;
     }
 
-    public void openPreview(Surface... surfaces) {
-        List<Surface> surfaceList = new ArrayList<>();
+    public void openPreview(Surface surface) {
         try {
             previewCaptureBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
-            for (int i = 0; i < surfaces.length; i++) {
-                previewCaptureBuilder.addTarget(surfaces[i]);
-                surfaceList.add(surfaces[i]);
-            }
-            cameraDevice.createCaptureSession(surfaceList, new CameraCaptureSession.StateCallback() {
+            previewCaptureBuilder.addTarget(surface);
+            cameraDevice.createCaptureSession(Arrays.asList(surface), new CameraCaptureSession.StateCallback() {
                 @Override
                 public void onConfigured(@NonNull CameraCaptureSession session) {
                     captureSession = session;
@@ -154,7 +156,6 @@ public class MyCamera {
                     } catch (CameraAccessException e) {
                         e.printStackTrace();
                     }
-
                 }
 
                 @Override
@@ -167,19 +168,18 @@ public class MyCamera {
         }
     }
 
-    public void openRecord(int rotation, Surface... surfaces) {
-        List<Surface> surfaceList = new ArrayList<>();
+
+    public void startRecord(int orientation, Surface surface) {
+        videoEncode.startEncode();
         if (captureSession != null) {
             captureSession.close();
         }
         try {
             recordCaptureBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_RECORD);
-            for (int i = 0; i < surfaces.length; i++) {
-                recordCaptureBuilder.addTarget(surfaces[i]);
-                surfaceList.add(surfaces[i]);
-            }
-            recordCaptureBuilder.set(CaptureRequest.JPEG_ORIENTATION, ORIENTATION.get(rotation));
-            cameraDevice.createCaptureSession(surfaceList, new CameraCaptureSession.StateCallback() {
+            recordCaptureBuilder.addTarget(surface);
+            recordCaptureBuilder.addTarget(imageReader.getSurface());
+            recordCaptureBuilder.set(CaptureRequest.JPEG_ORIENTATION, ORIENTATION.get(orientation));
+            cameraDevice.createCaptureSession(Arrays.asList(surface, imageReader.getSurface()), new CameraCaptureSession.StateCallback() {
                 @Override
                 public void onConfigured(@NonNull CameraCaptureSession session) {
                     captureSession = session;
@@ -199,6 +199,33 @@ public class MyCamera {
         } catch (CameraAccessException e) {
             e.printStackTrace();
         }
+    }
+
+    public void stopRecord(Surface surfaces) {
+        if (captureSession != null) {
+            captureSession.close();
+        }
+        videoEncode.stopEncode();
+        openPreview(surfaces);
+    }
+
+    public int getBackCameraId() {
+        return backCameraId;
+    }
+
+    public int getFrontCameraId() {
+        return frontCameraId;
+    }
+
+    public int[] getBestSize(int cameraType) {
+        if (cameraType == FRONT_CAMERA) {
+            return new int[]{frontBestWidth, frontBestHeight};
+        }
+        if (cameraType == BACK_CAMERA) {
+            return new int[]{backBestWidth, backBestHeight};
+        }
+        Log.e(TAG, "getBestSize: 参数不合法");
+        return null;
     }
 
     private void getCameraInfo() {
@@ -245,7 +272,7 @@ public class MyCamera {
         float diff = Float.MAX_VALUE;
         int bestWidth = 0, bestHeight = 0;
 
-        float bestRatio =  (float)height/(float)width;
+        float bestRatio = (float) height / (float) width;
 
         for (int j = 0; j < bestPreviewSizes.length - 1; j++) {
 
@@ -274,8 +301,6 @@ public class MyCamera {
             backBestWidth = bestWidth;
             backBestHeight = bestHeight;
         }
-
-
     }
 
     private void checkSupportLevel(String camera, int supportLevel) {
@@ -307,24 +332,4 @@ public class MyCamera {
             cameraDevice.close();
         }
     }
-
-    public int[] getBestSize(int cameraType) {
-        if (cameraType == FRONT_CAMERA) {
-            return new int[]{frontBestWidth, frontBestHeight};
-        }
-        if (cameraType == BACK_CAMERA) {
-            return new int[]{backBestWidth, backBestHeight};
-        }
-        Log.e(TAG, "getBestSize: 参数不合法");
-        return null;
-    }
-
-
-    public void closeRecord(Surface... surfaces) {
-        if (captureSession != null) {
-            captureSession.close();
-        }
-        openPreview(surfaces);
-    }
-
 }

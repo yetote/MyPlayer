@@ -179,7 +179,7 @@ public class MainActivity extends AppCompatActivity {
                     | SYSTEM_UI_FLAG_FULLSCREEN
                     | SYSTEM_UI_FLAG_HIDE_NAVIGATION);
         });
-        recordBtn.setOnClickListener(v -> startActivity(new Intent().setClass(MainActivity.this, RecordActivity.class)));
+        recordBtn.setOnClickListener(v -> startActivity(new Intent().setClass(MainActivity.this, NewRecordActivity.class)));
     }
 
     private void init() {

@@ -38,21 +38,24 @@ public class NewAudioEncode {
     private BlockingQueue<byte[]> blockingQueue;
     private Thread recordThread, encodeThread;
     private WriteFile writeFile;
+    private MutexMp4 mutexMp4;
+    private int frameCount = 0;
 
     public NewAudioEncode(int sampleRate, int channelLayout, String aacPath) {
         this.sampleRate = sampleRate;
         this.channelLayout = channelLayout;
         blockingQueue = new LinkedBlockingQueue<>();
         writeFile = new WriteFile(aacPath);
+        initMediaCodec();
+
     }
 
-    public void startRecord() {
+    public void startRecord(MutexMp4 mutex) {
+        this.mutexMp4 = mutex;
         if (audioRecord == null) {
             initAudioRecord();
         }
-        if (mediaCodec == null) {
-            initMediaCodec();
-        }
+
         isRecording = true;
 
         startRecordThread();
@@ -64,6 +67,7 @@ public class NewAudioEncode {
         if (audioRecord == null) {
             audioRecord.stop();
         }
+        mutexMp4.requestStop(MutexMp4.TRACK_AUDIO);
     }
 
 
@@ -107,9 +111,11 @@ public class NewAudioEncode {
                     if (inputBuffer != null) {
                         try {
                             byte[] data = blockingQueue.take();
+                            long pts = System.nanoTime() / 1000L;
                             inputBuffer.clear();
                             inputBuffer.put(data);
-                            mediaCodec.queueInputBuffer(inputIndex, 0, data.length, 0, 0);
+                            Log.e(TAG, "startEncodeThread: frame" + frameCount);
+                            mediaCodec.queueInputBuffer(inputIndex, 0, data.length, pts, 0);
                         } catch (InterruptedException e) {
                             e.printStackTrace();
                         }
@@ -119,7 +125,6 @@ public class NewAudioEncode {
 
                 int outputIndex = mediaCodec.dequeueOutputBuffer(bufferInfo, 10000);
                 while (outputIndex >= 0) {
-                    Log.e(TAG, "run: 进入编码循环");
                     ByteBuffer outputBuffer = mediaCodec.getOutputBuffer(outputIndex);
                     if (outputBuffer != null) {
                         outputBuffer.position(bufferInfo.offset);
@@ -127,14 +132,12 @@ public class NewAudioEncode {
                         byte[] outData = new byte[bufferInfo.size + 7];
                         outputBuffer.get(outData, 7, bufferInfo.size);
                         addADTStoPacket(outData, bufferInfo.size + 7);
-                        writeFile.write(outData);
+                        mutexMp4.startMutex(MutexMp4.TRACK_AUDIO, outputBuffer, bufferInfo);
                     }
                     mediaCodec.releaseOutputBuffer(outputIndex, false);
-                    Log.e(TAG, "run: outputIndex" + outputIndex);
                     outputIndex = mediaCodec.dequeueOutputBuffer(bufferInfo, 10000);
                 }
             }
-            Log.e(TAG, "run: ?????");
         }).start();
     }
 
@@ -190,5 +193,9 @@ public class NewAudioEncode {
         packet[4] = (byte) ((packetLen & 0x7FF) >> 3);
         packet[5] = (byte) (((packetLen & 7) << 5) | 0x1F);
         packet[6] = (byte) 0xFC;
+    }
+
+    public MediaFormat getMediaFormat() {
+        return mediaFormat;
     }
 }

@@ -40,6 +40,12 @@ public class NewVideoEncode {
     private BlockingQueue<byte[]> blockingQueue;
     private boolean isRecording;
     private Thread encodeThread;
+    private MutexMp4 mutexMp4;
+
+    public void setMutexMp4(MutexMp4 mutexMp4) {
+        this.mutexMp4 = mutexMp4;
+        Log.e(TAG, "setMutexMp4: video's mutex" + mutexMp4);
+    }
 
     public NewVideoEncode(int width, int height, String path) {
         this.width = width;
@@ -119,14 +125,14 @@ public class NewVideoEncode {
                             outputBuffer.get(pps);
                         }
                     }
-                    if (bufferInfo.flags == 1) {
-                        Log.e(TAG, "run: 关键帧");
-                        writeFile.write(pps);
-                    } else {
+//                    if (bufferInfo.flags == 1) {
+//                        Log.e(TAG, "run: 关键帧");
+////                        writeFile.write(pps);
+//                    } else {
                         outputBuffer.position(bufferInfo.offset);
                         outputBuffer.limit(bufferInfo.offset + bufferInfo.size);
-                    }
-                    writeFile.write(outputBuffer);
+//                    }
+                    mutexMp4.startMutex(MutexMp4.TRACK_VIDEO, outputBuffer, bufferInfo);
                     mediaCodec.releaseOutputBuffer(outBufferIndex, false);
                     outBufferIndex = mediaCodec.dequeueOutputBuffer(bufferInfo, 0);
                 }
@@ -140,7 +146,6 @@ public class NewVideoEncode {
         long now = System.currentTimeMillis();
         int w = img.getWidth();
         int h = img.getHeight();
-        Log.e(TAG, "dataEnqueue: 图片宽高" + w + h);
         byte[] yBuffer = new byte[w * h];
         byte[] uvBuffer = new byte[w * h / 2];
         byte[] dataBuffer = new byte[w * h * 3 / 2];
@@ -154,10 +159,14 @@ public class NewVideoEncode {
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-        Log.e(TAG, "dataEnqueue: 耗时" + (System.currentTimeMillis() - now));
     }
 
     public void stopEncode() {
         isRecording = false;
+        mutexMp4.requestStop(MutexMp4.TRACK_VIDEO);
+    }
+
+    public MediaFormat getMediaFormat() {
+        return mediaFormat;
     }
 }

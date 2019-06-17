@@ -15,6 +15,7 @@ import android.view.TextureView;
 import android.view.View;
 import android.widget.Button;
 
+import com.example.myplayer.encode.MutexMp4;
 import com.example.myplayer.encode.MyCamera2;
 import com.example.myplayer.encode.NewAudioEncode;
 
@@ -32,6 +33,8 @@ public class NewRecordActivity extends AppCompatActivity {
     private boolean isRecording;
     private String aacPath;
     private String videoPath;
+    private String mp4Path;
+    private MutexMp4 mutex;
     private SurfaceTexture surfaceTexture;
     private TextureView textureView;
     private MyCamera2 myCamera;
@@ -110,17 +113,21 @@ public class NewRecordActivity extends AppCompatActivity {
         textureView = findViewById(R.id.new_record_textureView);
         aacPath = getExternalCacheDir().getPath() + "/res/test.aac";
         videoPath = getExternalCacheDir().getPath() + "/res/test.h264";
+        mp4Path = getExternalCacheDir().getPath() + "/res/video.mp4";
+        audioEncode = new NewAudioEncode(48000, 2, aacPath);
         myCamera = new MyCamera2(this, videoPath, width, height);
         isCameraInit = myCamera.initCamera();
         textureView.setSurfaceTextureListener(surfaceTextureListener);
+        mutex = new MutexMp4(this, mp4Path);
+        mutex.initMutex(audioEncode.getMediaFormat(), myCamera.getMediaFormat());
     }
 
     private void startRecord() {
         isRecording = true;
         surfaceTexture.setDefaultBufferSize(bestPreviewSize[0], bestPreviewSize[1]);
-        audioEncode = new NewAudioEncode(48000, 2, aacPath);
-        audioEncode.startRecord();
-        myCamera.startRecord(getWindowManager().getDefaultDisplay().getRotation(), new Surface(surfaceTexture));
+
+        audioEncode.startRecord(mutex);
+        myCamera.startRecord(mutex, getWindowManager().getDefaultDisplay().getRotation(), new Surface(surfaceTexture));
     }
 
     @Override

@@ -1,4 +1,4 @@
-package com.example.myplayer.encode;
+package com.example.myplayer.newencode;
 
 import android.Manifest;
 import android.content.Context;
@@ -14,7 +14,6 @@ import android.hardware.camera2.CaptureRequest;
 import android.hardware.camera2.params.StreamConfigurationMap;
 import android.media.Image;
 import android.media.ImageReader;
-import android.media.MediaFormat;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.util.Log;
@@ -25,46 +24,41 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
-import androidx.core.content.PermissionChecker;
 
 import java.util.Arrays;
-
-import static androidx.core.content.PermissionChecker.checkSelfPermission;
 
 /**
  * @author yetote QQ:503779938
  * @name MyPlayer
- * @class name：com.example.myplayer.encode
+ * @class name：com.example.myplayer.newencode
  * @class describe
- * @time 2019/5/28 13:53
+ * @time 2019/6/17 10:44
  * @change
  * @chang time
  * @class describe
  */
-public class MyCamera2 {
-    private static final String TAG = "MyCamera";
+public class CameraUtil {
+    private static final String TAG = "CameraUtil";
     private Context context;
     private String path;
     private Handler backgroundHandler;
     private HandlerThread backgroundThread;
-    private int width, height;
-    private int frontBestWidth, frontBestHeight;
-    private int backBestWidth, backBestHeight;
+    private int recordWidth, recordHeight, displayWidth, displayHeight;
     private CameraManager cameraManager;
     public static final int FRONT_CAMERA = 0;
     public static final int BACK_CAMERA = 1;
-    private NewVideoEncode videoEncode;
     private int backCameraId, frontCameraId;
     private CameraDevice cameraDevice;
     private CameraCharacteristics backCameraCharacteristics, frontCameraCharacteristics;
     private CameraCaptureSession captureSession;
     private CaptureRequest.Builder previewCaptureBuilder, recordCaptureBuilder;
     private String[] cameraIds;
+    private Size bestFrontSize, bestBackSize;
     private static final SparseIntArray ORIENTATION = new SparseIntArray();
     private ImageReader imageReader;
     private ImageReader.OnImageAvailableListener imageAvailableListener = reader -> {
         Image image = reader.acquireLatestImage();
-        videoEncode.encodeData(image);
+        Log.e(TAG, ": 接受到了图片");
         image.close();
     };
 
@@ -75,23 +69,21 @@ public class MyCamera2 {
         ORIENTATION.append(Surface.ROTATION_270, 180);
     }
 
-    public MyCamera2(Context context, String path, int w, int h) {
-        this.width = w;
-        this.height = h;
+    public CameraUtil(Context context, int displayWidth, int displayHeight) {
         this.context = context;
-        this.path = path;
+        this.displayWidth = displayWidth;
+        this.displayHeight = displayHeight;
         backCameraId = frontCameraId = -1;
         backgroundThread = new HandlerThread("CameraBackground");
         backgroundThread.start();
         backgroundHandler = new android.os.Handler(backgroundThread.getLooper());
         imageReader = ImageReader.newInstance(1280, 640, ImageFormat.YUV_420_888, 1);
         imageReader.setOnImageAvailableListener(imageAvailableListener, backgroundHandler);
-        videoEncode = new NewVideoEncode(1280, 640, path);
-
+        initCamera();
     }
 
     public boolean initCamera() {
-        if (width == 0 || height == 0) {
+        if (displayWidth == 0 || displayHeight == 0) {
             Log.e(TAG, "openCamera: 获取的宽度和高度不正确");
             return false;
         }
@@ -109,18 +101,59 @@ public class MyCamera2 {
         return true;
     }
 
-    public void openCamera(int cameraId) {
+    private void getCameraInfo() {
+        try {
+            cameraIds = cameraManager.getCameraIdList();
+            if (cameraIds.length == 0) {
+                Log.e(TAG, "getCameraInfo: 未找到相机");
+                return;
+            }
+            for (int i = 0; i < cameraIds.length; i++) {
+                CameraCharacteristics cameraCharacteristics = cameraManager.getCameraCharacteristics(cameraIds[i]);
+                if (cameraCharacteristics.get(CameraCharacteristics.LENS_FACING) == CameraMetadata.LENS_FACING_FRONT) {
+                    Log.e(TAG, "getCameraInfo: 获取到前置摄像机");
+                    frontCameraCharacteristics = cameraCharacteristics;
+                    checkSupportLevel("前置相机", cameraCharacteristics.get(CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL));
+                    frontCameraId = i;
+                } else if (cameraCharacteristics.get(CameraCharacteristics.LENS_FACING) == CameraMetadata.LENS_FACING_BACK) {
+                    Log.e(TAG, "getCameraInfo: 获取到后置摄像机");
+                    backCameraCharacteristics = cameraCharacteristics;
+                    checkSupportLevel("后置相机", cameraCharacteristics.get(CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL));
+                    backCameraId = i;
+                }
+            }
+
+            if (frontCameraId != -1) {
+                StreamConfigurationMap configurationMap = frontCameraCharacteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
+                Size[] bestPreviewSizes = configurationMap.getOutputSizes(ImageFormat.YUV_420_888);
+                Log.e(TAG, "getCameraInfo: frontCamera" + Arrays.toString(bestPreviewSizes));
+//                chooseBestSize(FRONT_CAMERA, bestPreviewSizes);
+            }
+            if (backCameraId != -1) {
+                StreamConfigurationMap configurationMap = backCameraCharacteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
+                Size[] bestPreviewSizes = configurationMap.getOutputSizes(ImageFormat.YUV_420_888);
+                Log.e(TAG, "getCameraInfo: backCamera" + Arrays.toString(bestPreviewSizes));
+                chooseBestSize(BACK_CAMERA, bestPreviewSizes);
+            }
+
+        } catch (CameraAccessException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void openCamera(int cameraType, Surface surface) {
         if (ActivityCompat.checkSelfPermission(context, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
             Log.e(TAG, "openCamera: 请打开相机权限");
             return;
         }
+        int cameraId = cameraType == BACK_CAMERA ? backCameraId : frontCameraId;
         try {
             cameraManager.openCamera(cameraIds[cameraId], new CameraDevice.StateCallback() {
                 @Override
                 public void onOpened(@NonNull CameraDevice camera) {
                     cameraDevice = camera;
                     Log.e(TAG, "onOpened: 相机打开成功");
-
+                    openPreview(surface);
                 }
 
                 @Override
@@ -168,9 +201,17 @@ public class MyCamera2 {
         }
     }
 
-    public void startRecord(MutexMp4 mutex, int orientation, Surface surface) {
-        videoEncode.setMutexMp4(mutex);
-        videoEncode.startEncode();
+    public void stopRecord(Surface surfaces) {
+        if (captureSession != null) {
+            captureSession.close();
+        }
+//        videoEncode.stopEncode();
+        openPreview(surfaces);
+    }
+
+    public void startRecord(int orientation, Surface surface) {
+//        videoEncode.setMutexMp4(mutex);
+//        videoEncode.startEncode();
         if (captureSession != null) {
             captureSession.close();
         }
@@ -201,108 +242,6 @@ public class MyCamera2 {
         }
     }
 
-    public void stopRecord(Surface surfaces) {
-        if (captureSession != null) {
-            captureSession.close();
-        }
-        videoEncode.stopEncode();
-        openPreview(surfaces);
-    }
-
-    public int getBackCameraId() {
-        return backCameraId;
-    }
-
-    public int getFrontCameraId() {
-        return frontCameraId;
-    }
-
-    public int[] getBestSize(int cameraType) {
-        if (cameraType == FRONT_CAMERA) {
-            return new int[]{frontBestWidth, frontBestHeight};
-        }
-        if (cameraType == BACK_CAMERA) {
-            return new int[]{backBestWidth, backBestHeight};
-        }
-        Log.e(TAG, "getBestSize: 参数不合法");
-        return null;
-    }
-
-    private void getCameraInfo() {
-        try {
-            cameraIds = cameraManager.getCameraIdList();
-            if (cameraIds.length == 0) {
-                Log.e(TAG, "getCameraInfo: 未找到相机");
-                return;
-            }
-            for (int i = 0; i < cameraIds.length; i++) {
-                CameraCharacteristics cameraCharacteristics = cameraManager.getCameraCharacteristics(cameraIds[i]);
-                if (cameraCharacteristics.get(CameraCharacteristics.LENS_FACING) == CameraMetadata.LENS_FACING_FRONT) {
-                    Log.e(TAG, "getCameraInfo: 获取到前置摄像机");
-                    frontCameraCharacteristics = cameraCharacteristics;
-                    checkSupportLevel("前置相机", cameraCharacteristics.get(CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL));
-                    frontCameraId = i;
-                } else if (cameraCharacteristics.get(CameraCharacteristics.LENS_FACING) == CameraMetadata.LENS_FACING_BACK) {
-                    Log.e(TAG, "getCameraInfo: 获取到后置摄像机");
-                    backCameraCharacteristics = cameraCharacteristics;
-                    checkSupportLevel("后置相机", cameraCharacteristics.get(CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL));
-                    backCameraId = i;
-                }
-            }
-
-            if (frontCameraId != -1) {
-                StreamConfigurationMap configurationMap = frontCameraCharacteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
-                Size[] bestPreviewSizes = configurationMap.getOutputSizes(ImageFormat.YUV_420_888);
-                Log.e(TAG, "getCameraInfo: frontCamera" + Arrays.toString(bestPreviewSizes));
-//                chooseBestSize(FRONT_CAMERA, bestPreviewSizes);
-            }
-            if (backCameraId != -1) {
-                StreamConfigurationMap configurationMap = backCameraCharacteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
-                Size[] bestPreviewSizes = configurationMap.getOutputSizes(ImageFormat.YUV_420_888);
-                Log.e(TAG, "getCameraInfo: backCamera" + Arrays.toString(bestPreviewSizes));
-                chooseBestSize(BACK_CAMERA, bestPreviewSizes);
-            }
-
-        } catch (CameraAccessException e) {
-            e.printStackTrace();
-        }
-    }
-
-    private void chooseBestSize(int cameraType, Size[] bestPreviewSizes) {
-        float diff = Float.MAX_VALUE;
-        int bestWidth = 0, bestHeight = 0;
-
-        float bestRatio = (float) height / (float) width;
-
-        for (int j = 0; j < bestPreviewSizes.length - 1; j++) {
-
-            float newDiff = Math.abs(bestPreviewSizes[j].getWidth() / bestPreviewSizes[j].getHeight() - bestRatio);
-            if (newDiff == 0) {
-                bestWidth = bestPreviewSizes[j].getWidth();
-                bestHeight = bestPreviewSizes[j].getHeight();
-                break;
-            }
-
-            if (newDiff < diff) {
-                bestWidth = bestPreviewSizes[j].getWidth();
-                bestHeight = bestPreviewSizes[j].getHeight();
-                diff = newDiff;
-            }
-        }
-        if (bestWidth == 0) {
-            Log.e(TAG, "chooseBestSize: 最佳分辨率为0");
-            return;
-        }
-        Log.e(TAG, "chooseBestSize: bestPreviewSize" + bestWidth + "\n" + bestHeight);
-        if (cameraType == FRONT_CAMERA) {
-            frontBestWidth = bestWidth;
-            frontBestHeight = bestHeight;
-        } else {
-            backBestWidth = bestWidth;
-            backBestHeight = bestHeight;
-        }
-    }
-
     private void checkSupportLevel(String camera, int supportLevel) {
         switch (supportLevel) {
             case CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_LEGACY:
@@ -327,13 +266,55 @@ public class MyCamera2 {
         }
     }
 
+    private void chooseBestSize(int cameraType, Size[] bestPreviewSizes) {
+        float diff = Float.MAX_VALUE;
+        int bestWidth = 0, bestHeight = 0;
+
+        float bestRatio = (float) displayHeight / (float) displayWidth;
+
+        for (int j = 0; j < bestPreviewSizes.length - 1; j++) {
+
+            float newDiff = Math.abs((float) bestPreviewSizes[j].getWidth() / (float) bestPreviewSizes[j].getHeight() - bestRatio);
+            if (newDiff == 0) {
+                bestWidth = bestPreviewSizes[j].getWidth();
+                bestHeight = bestPreviewSizes[j].getHeight();
+                break;
+            }
+
+            if (newDiff < diff) {
+                bestWidth = bestPreviewSizes[j].getWidth();
+                bestHeight = bestPreviewSizes[j].getHeight();
+                diff = newDiff;
+            }
+        }
+        if (bestWidth == 0) {
+            Log.e(TAG, "chooseBestSize: 最佳分辨率为0");
+            return;
+        }
+        Log.e(TAG, "chooseBestSize: bestPreviewSize" + bestWidth + "\n" + bestHeight);
+        if (cameraType == FRONT_CAMERA) {
+            bestFrontSize = new Size(bestWidth, bestHeight);
+
+        } else {
+            bestBackSize = new Size(bestWidth, bestHeight);
+        }
+    }
+
     public void releaseCamera() {
         if (cameraDevice != null) {
             cameraDevice.close();
         }
     }
 
-    public MediaFormat getMediaFormat() {
-        return videoEncode.getMediaFormat();
+    public Size getBestSize(int cameraType) {
+        if (cameraType == FRONT_CAMERA) {
+            return bestFrontSize;
+        }
+        if (cameraType == BACK_CAMERA) {
+            return bestBackSize;
+        }
+        Log.e(TAG, "getBestSize: 参数不合法");
+        return null;
     }
+
 }

@@ -56,9 +56,11 @@ public class CameraUtil {
     private Size bestFrontSize, bestBackSize;
     private static final SparseIntArray ORIENTATION = new SparseIntArray();
     private ImageReader imageReader;
+    private EncodeVideo encodeVideo;
     private ImageReader.OnImageAvailableListener imageAvailableListener = reader -> {
         Image image = reader.acquireLatestImage();
         Log.e(TAG, ": 接受到了图片");
+        encodeData(image);
         image.close();
     };
 
@@ -73,6 +75,7 @@ public class CameraUtil {
         this.context = context;
         this.displayWidth = displayWidth;
         this.displayHeight = displayHeight;
+        encodeVideo = new EncodeVideo(1280, 960);
         backCameraId = frontCameraId = -1;
         backgroundThread = new HandlerThread("CameraBackground");
         backgroundThread.start();
@@ -212,6 +215,7 @@ public class CameraUtil {
     public void startRecord(int orientation, Surface surface) {
 //        videoEncode.setMutexMp4(mutex);
 //        videoEncode.startEncode();
+        encodeVideo.start();
         if (captureSession != null) {
             captureSession.close();
         }
@@ -317,4 +321,18 @@ public class CameraUtil {
         return null;
     }
 
+    public void encodeData(Image img) {
+        long now = System.currentTimeMillis();
+        int w = img.getWidth();
+        int h = img.getHeight();
+        byte[] yBuffer = new byte[w * h];
+        byte[] uvBuffer = new byte[w * h / 2];
+        byte[] dataBuffer = new byte[w * h * 3 / 2];
+        img.getPlanes()[0].getBuffer().get(yBuffer);
+        img.getPlanes()[1].getBuffer().get(uvBuffer, 0, w * h / 2 - 1);
+        uvBuffer[w * h / 2 - 1] = img.getPlanes()[2].getBuffer().get(w * h / 2 - 2);
+        System.arraycopy(yBuffer, 0, dataBuffer, 0, yBuffer.length);
+        System.arraycopy(uvBuffer, 0, dataBuffer, yBuffer.length, uvBuffer.length);
+        encodeVideo.pushData(dataBuffer);
+    }
 }

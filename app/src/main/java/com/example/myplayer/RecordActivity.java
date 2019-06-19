@@ -1,12 +1,10 @@
 package com.example.myplayer;
 
-import android.graphics.Point;
 import android.graphics.SurfaceTexture;
 import android.os.Bundle;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.util.Size;
-import android.view.Display;
 import android.view.Surface;
 import android.view.TextureView;
 import android.view.View;
@@ -15,8 +13,7 @@ import android.widget.Button;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.example.myplayer.encode.MyCamera2;
-import com.example.myplayer.newencode.Encode;
+import com.example.myplayer.newencode.Record;
 
 import static android.view.View.SYSTEM_UI_FLAG_FULLSCREEN;
 import static android.view.View.SYSTEM_UI_FLAG_HIDE_NAVIGATION;
@@ -34,18 +31,19 @@ import static android.view.View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY;
  */
 public class RecordActivity extends AppCompatActivity {
     private Button btn;
-    private Encode encode;
+    private Record record;
     private int dw, dh;
     private TextureView textureView;
     private SurfaceTexture surfaceTexture;
     private Size bestPreviewSize;
     private static final String TAG = "RecordActivity";
+    private boolean isRecording;
     private TextureView.SurfaceTextureListener surfaceTextureListener = new TextureView.SurfaceTextureListener() {
         @Override
         public void onSurfaceTextureAvailable(SurfaceTexture surface, int width, int height) {
             surfaceTexture = surface;
             resetBestPreviewSize(surfaceTexture);
-            encode.openCamera(new Surface(surfaceTexture));
+            record.openCamera(new Surface(surfaceTexture));
         }
 
         @Override
@@ -66,8 +64,8 @@ public class RecordActivity extends AppCompatActivity {
 
     private void resetBestPreviewSize(SurfaceTexture surfaceTexture) {
         if (bestPreviewSize == null) {
-            if (encode != null) {
-                bestPreviewSize = encode.getBestSize();
+            if (record != null) {
+                bestPreviewSize = record.getBestSize();
                 if (bestPreviewSize != null) {
                     surfaceTexture.setDefaultBufferSize(bestPreviewSize.getWidth(), bestPreviewSize.getHeight());
                 }
@@ -94,11 +92,15 @@ public class RecordActivity extends AppCompatActivity {
         btn = findViewById(R.id.new_record_start__btn);
         textureView = findViewById(R.id.new_record_textureView);
 
-        encode = new Encode(this, 48000, 2, dw, dh);
+        record = new Record(this, 48000, 2, dw, dh);
         textureView.setSurfaceTextureListener(surfaceTextureListener);
-        btn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
+        btn.setOnClickListener(v -> {
+            if (!isRecording) {
+                resetBestPreviewSize(surfaceTexture);
+                record.start(getWindowManager().getDefaultDisplay().getRotation(), new Surface(surfaceTexture));
+                isRecording = true;
+            } else {
+
 
             }
         });

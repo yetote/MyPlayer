@@ -32,7 +32,7 @@ public class NewVideoEncode {
     private WriteFile writeFile;
     private MediaCodec mediaCodec;
     private MediaFormat mediaFormat;
-    private static final String TAG = "VideoEncode";
+    private static final String TAG = "RecordVideo";
     byte[] pps;
     private long frameCount = 0;
     private int bitrate;

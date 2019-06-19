@@ -14,18 +14,19 @@ import android.view.Surface;
  * @chang time
  * @class describe
  */
-public class VideoEncode {
-    private VideoEncode videoEncode;
+public class RecordVideo {
+    private RecordVideo videoEncode;
     private Context context;
     private CameraUtil cameraUtil;
 
-    public VideoEncode(Context context, int displayWidth, int displayHeight) {
+    public RecordVideo(Context context, int displayWidth, int displayHeight) {
         this.context = context;
         cameraUtil = new CameraUtil(context, displayWidth, displayHeight);
     }
 
     public void openCamera(Surface surface) {
         cameraUtil.openCamera(CameraUtil.BACK_CAMERA, surface);
+
     }
 
     public void start(int orientation, Surface surface) {

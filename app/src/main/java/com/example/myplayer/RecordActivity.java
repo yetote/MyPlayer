@@ -100,8 +100,8 @@ public class RecordActivity extends AppCompatActivity {
                 record.start(getWindowManager().getDefaultDisplay().getRotation(), new Surface(surfaceTexture));
                 isRecording = true;
             } else {
-
-
+                resetBestPreviewSize(surfaceTexture);
+                record.stop(new Surface(surfaceTexture));
             }
         });
     }

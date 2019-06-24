@@ -208,8 +208,8 @@ public class CameraUtil {
         if (captureSession != null) {
             captureSession.close();
         }
-//        videoEncode.stopEncode();
         openPreview(surfaces);
+        encodeVideo.stop();
     }
 
     public void startRecord(int orientation, Surface surface) {

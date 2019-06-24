@@ -33,6 +33,10 @@ public class RecordVideo {
         cameraUtil.startRecord(orientation, surface);
     }
 
+    public void stop(Surface surface) {
+        cameraUtil.stopRecord(surface);
+    }
+
     public Size getBestSize() {
         if (cameraUtil != null) {
             return cameraUtil.getBestSize(CameraUtil.BACK_CAMERA);

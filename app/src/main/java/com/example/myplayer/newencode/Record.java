@@ -32,8 +32,13 @@ public class Record {
     }
 
     public void start(int orientation, Surface surface) {
-        recordAudio.start();
+//        recordAudio.start();
         recordVideo.start(orientation, surface);
+    }
+
+    public void stop(Surface surface) {
+//        recordAudio.stop();
+        recordVideo.stop(surface);
     }
 
     public Size getBestSize() {

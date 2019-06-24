@@ -23,6 +23,7 @@ public class RecordAudio {
     private Thread thread;
     private boolean isRecording;
     private byte[] audioData;
+    private EncodeAudio encodeAudio;
 
     public RecordAudio(int sampleRate, int channelCount) {
         this.sampleRate = sampleRate;
@@ -41,11 +42,16 @@ public class RecordAudio {
         }
         audioRecord = new AudioRecord(MediaRecorder.AudioSource.MIC, sampleRate, channelLayout, AudioFormat.ENCODING_PCM_16BIT, sampleRate * channelCount);
         audioData = new byte[sampleRate * channelCount];
+        encodeAudio = new EncodeAudio(sampleRate, channelCount);
         thread = new Thread(() -> {
             while (isRecording) {
                 int ret = audioRecord.read(audioData, 0, sampleRate * channelCount);
                 Log.e(TAG, "RecordAudio: 读取了" + ret + "个字节");
+                encodeAudio.pushData(audioData);
             }
+            audioRecord.stop();
+            encodeAudio.stop();
+            audioRecord.release();
         });
     }
 
@@ -56,6 +62,11 @@ public class RecordAudio {
         }
         isRecording = true;
         audioRecord.startRecording();
+        encodeAudio.start();
         thread.start();
+    }
+
+    public void stop() {
+        isRecording = false;
     }
 }

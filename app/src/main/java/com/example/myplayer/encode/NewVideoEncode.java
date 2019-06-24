@@ -136,7 +136,6 @@ public class NewVideoEncode {
                     mediaCodec.releaseOutputBuffer(outBufferIndex, false);
                     outBufferIndex = mediaCodec.dequeueOutputBuffer(bufferInfo, 0);
                 }
-
             }
         }).start();
     }

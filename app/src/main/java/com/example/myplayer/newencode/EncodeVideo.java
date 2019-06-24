@@ -10,6 +10,7 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
@@ -51,12 +52,27 @@ public class EncodeVideo {
             e.printStackTrace();
         }
         videoCodec.setCallback(new MediaCodec.Callback() {
+
             @Override
             public void onInputBufferAvailable(@NonNull MediaCodec codec, int index) {
-                if (!isRecording && videoQueue.isEmpty()) {
-                    Log.e(TAG, "onInputBufferAvailable: 视频最后一帧");
-                } else {
-                    Log.e(TAG, "onInputBufferAvailable: 视频送入编码区");
+                if (index >= 0) {
+
+                    ByteBuffer inputBuffer = codec.getInputBuffer(index);
+                    if (inputBuffer != null) {
+                        try {
+                            byte[] data = videoQueue.take();
+                            int flag = 0;
+                            if (!isRecording && videoQueue.isEmpty()) {
+                                Log.e(TAG, "onInputBufferAvailable: 最后一帧");
+                                flag = MediaCodec.BUFFER_FLAG_END_OF_STREAM;
+                            }
+                            inputBuffer.clear();
+                            inputBuffer.put(data);
+                            codec.queueInputBuffer(index, 0, data.length, System.currentTimeMillis(), flag);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                    }
                 }
             }
 

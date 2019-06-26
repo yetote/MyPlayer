@@ -19,12 +19,14 @@ public class Record {
     private RecordAudio recordAudio;
     private RecordVideo recordVideo;
     private Encode encode;
+    private MutexUtil mutexUtil;
 
-    public Record(Context context, int sampleRate, int channelCount, int displayWidth, int displayHeight) {
+    public Record(Context context, int sampleRate, int channelCount, int displayWidth, int displayHeight, String path) {
         this.context = context;
         recordAudio = new RecordAudio(sampleRate, channelCount);
         recordVideo = new RecordVideo(context, displayWidth, displayHeight);
-        encode = new Encode(1280, 960, sampleRate, channelCount);
+//        encode = new Encode(1280, 640, sampleRate, channelCount);
+        mutexUtil = new MutexUtil(path);
     }
 
     public void openCamera(Surface surface) {
@@ -32,12 +34,13 @@ public class Record {
     }
 
     public void start(int orientation, Surface surface) {
-//        recordAudio.start();
-        recordVideo.start(orientation, surface);
+        recordAudio.start(mutexUtil);
+        recordVideo.start(orientation, surface,mutexUtil);
+
     }
 
     public void stop(Surface surface) {
-//        recordAudio.stop();
+        recordAudio.stop();
         recordVideo.stop(surface);
     }
 

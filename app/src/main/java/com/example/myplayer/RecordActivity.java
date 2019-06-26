@@ -38,6 +38,7 @@ public class RecordActivity extends AppCompatActivity {
     private Size bestPreviewSize;
     private static final String TAG = "RecordActivity";
     private boolean isRecording;
+    private String path;
     private TextureView.SurfaceTextureListener surfaceTextureListener = new TextureView.SurfaceTextureListener() {
         @Override
         public void onSurfaceTextureAvailable(SurfaceTexture surface, int width, int height) {
@@ -70,6 +71,8 @@ public class RecordActivity extends AppCompatActivity {
                     surfaceTexture.setDefaultBufferSize(bestPreviewSize.getWidth(), bestPreviewSize.getHeight());
                 }
             }
+        } else {
+            surfaceTexture.setDefaultBufferSize(bestPreviewSize.getWidth(), bestPreviewSize.getHeight());
         }
     }
 
@@ -87,12 +90,11 @@ public class RecordActivity extends AppCompatActivity {
         dw = metric.widthPixels;
         dh = metric.heightPixels;
         Log.e(TAG, "onCreate: 屏幕分辨率为 " + dw + "      " + dh);
-
-
+        path = this.getExternalFilesDir(null).getPath() + "/test.mp4";
         btn = findViewById(R.id.new_record_start__btn);
         textureView = findViewById(R.id.new_record_textureView);
 
-        record = new Record(this, 48000, 2, dw, dh);
+        record = new Record(this, 48000, 2, dw, dh, path);
         textureView.setSurfaceTextureListener(surfaceTextureListener);
         btn.setOnClickListener(v -> {
             if (!isRecording) {

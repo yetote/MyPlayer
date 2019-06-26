@@ -59,7 +59,7 @@ public class CameraUtil {
     private EncodeVideo encodeVideo;
     private ImageReader.OnImageAvailableListener imageAvailableListener = reader -> {
         Image image = reader.acquireLatestImage();
-        Log.e(TAG, ": 接受到了图片");
+//        Log.e(TAG, ": 接受到了图片");
         encodeData(image);
         image.close();
     };
@@ -75,7 +75,7 @@ public class CameraUtil {
         this.context = context;
         this.displayWidth = displayWidth;
         this.displayHeight = displayHeight;
-        encodeVideo = new EncodeVideo(1280, 960);
+        encodeVideo = new EncodeVideo(1280, 640);
         backCameraId = frontCameraId = -1;
         backgroundThread = new HandlerThread("CameraBackground");
         backgroundThread.start();
@@ -212,10 +212,8 @@ public class CameraUtil {
         encodeVideo.stop();
     }
 
-    public void startRecord(int orientation, Surface surface) {
-//        videoEncode.setMutexMp4(mutex);
-//        videoEncode.startEncode();
-        encodeVideo.start();
+    public void startRecord(int orientation, Surface surface, MutexUtil mutexUtil) {
+        encodeVideo.start(mutexUtil);
         if (captureSession != null) {
             captureSession.close();
         }

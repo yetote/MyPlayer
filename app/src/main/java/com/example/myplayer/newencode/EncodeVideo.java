@@ -31,9 +31,10 @@ public class EncodeVideo {
     private static final String TAG = "EncodeVideo";
     private MediaCodec videoCodec;
     private MediaFormat videoFormat;
-
+    private MutexUtil mutexUtil;
     private BlockingQueue<byte[]> videoQueue;
     private boolean isRecording;
+    private long pts = 0;
 
     public EncodeVideo(int recordWidth, int recordHeight) {
         videoQueue = new LinkedBlockingQueue<>();
@@ -68,7 +69,10 @@ public class EncodeVideo {
                             }
                             inputBuffer.clear();
                             inputBuffer.put(data);
-                            codec.queueInputBuffer(index, 0, data.length, System.currentTimeMillis(), flag);
+                            if (pts == 0) {
+                                pts = System.currentTimeMillis() * 1000L;
+                            }
+                            codec.queueInputBuffer(index, 0, data.length, System.currentTimeMillis() * 1000L - pts, flag);
                         } catch (InterruptedException e) {
                             e.printStackTrace();
                         }
@@ -79,6 +83,21 @@ public class EncodeVideo {
             @Override
             public void onOutputBufferAvailable(@NonNull MediaCodec codec, int index, @NonNull MediaCodec.BufferInfo info) {
                 Log.e(TAG, "onOutputBufferAvailable: 视频送出编码区");
+                if (index >= 0) {
+                    ByteBuffer outBuffer = codec.getOutputBuffer(index);
+                    if (outBuffer != null) {
+                        if (info.flags != MediaCodec.BUFFER_FLAG_END_OF_STREAM) {
+                            Log.e(TAG, "onOutputBufferAvailable: 写入封包器的视频flag为" + info.flags);
+
+                            mutexUtil.writeData(outBuffer, info, false);
+                        }
+                    }
+                }
+
+                if (info.flags == MediaCodec.BUFFER_FLAG_END_OF_STREAM) {
+                    Log.e(TAG, "onOutputBufferAvailable: 视频编码结束");
+                    mutexUtil.stop(false);
+                }
                 codec.releaseOutputBuffer(index, false);
             }
 
@@ -89,7 +108,8 @@ public class EncodeVideo {
 
             @Override
             public void onOutputFormatChanged(@NonNull MediaCodec codec, @NonNull MediaFormat format) {
-
+                Log.e(TAG, "onOutputFormatChanged: " + format);
+                mutexUtil.addTrack(format, false);
             }
         }, videoHandler);
 
@@ -104,7 +124,8 @@ public class EncodeVideo {
         }
     }
 
-    public void start() {
+    public void start(MutexUtil mutexUtil) {
+        this.mutexUtil = mutexUtil;
         isRecording = true;
         videoCodec.start();
     }

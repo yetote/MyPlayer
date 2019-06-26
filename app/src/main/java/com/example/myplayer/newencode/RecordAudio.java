@@ -49,24 +49,25 @@ public class RecordAudio {
                 Log.e(TAG, "RecordAudio: 读取了" + ret + "个字节");
                 encodeAudio.pushData(audioData);
             }
-            audioRecord.stop();
-            encodeAudio.stop();
-            audioRecord.release();
+
         });
     }
 
-    public void start() {
+    public void start(MutexUtil mutexUtil) {
         if (audioRecord.getState() != AudioRecord.STATE_INITIALIZED) {
             Log.e(TAG, "start: 录音器未启动");
             return;
         }
         isRecording = true;
         audioRecord.startRecording();
-        encodeAudio.start();
+        encodeAudio.start(mutexUtil);
         thread.start();
     }
 
     public void stop() {
         isRecording = false;
+        audioRecord.stop();
+        encodeAudio.stop();
+        audioRecord.release();
     }
 }

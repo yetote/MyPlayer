@@ -29,8 +29,8 @@ public class RecordVideo {
 
     }
 
-    public void start(int orientation, Surface surface) {
-        cameraUtil.startRecord(orientation, surface);
+    public void start(int orientation, Surface surface, MutexUtil mutexUtil) {
+        cameraUtil.startRecord(orientation, surface,mutexUtil);
     }
 
     public void stop(Surface surface) {
